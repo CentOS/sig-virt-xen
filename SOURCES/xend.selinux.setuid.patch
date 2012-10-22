@@ -1,0 +1,12 @@
+--- xen-4.1.2/tools/python/xen/xend/server/SrvDaemon.py.orig	2012-04-15 17:17:50.167887550 +0100
++++ xen-4.1.2/tools/python/xen/xend/server/SrvDaemon.py	2012-04-15 17:31:13.648842655 +0100
+@@ -325,7 +325,8 @@
+     def set_user(self):
+         # Set the UID.
+         try:
+-            os.setuid(pwd.getpwnam(XEND_USER)[2])
++            if XEND_USER != "root":
++                os.setuid(pwd.getpwnam(XEND_USER)[2])
+             return 0
+         except KeyError:
+             print >>sys.stderr, "Error: no such user '%s'" % XEND_USER

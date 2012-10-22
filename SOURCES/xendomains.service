@@ -1,0 +1,14 @@
+[Unit]
+Description=Xendomains - start and stop guests on boot and shutdown
+Requires=proc-xen.mount xenstored.service
+After=proc-xen.mount xenstored.service xenconsoled.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=true
+ExecStartPre=/bin/grep -q control_d /proc/xen/capabilities
+ExecStart=/usr/libexec/xendomains start
+ExecStop=/usr/libexec/xendomains stop
+
+[Install]
+WantedBy=multi-user.target
