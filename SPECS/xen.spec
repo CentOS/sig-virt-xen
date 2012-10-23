@@ -19,8 +19,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.1.2
-Release: 15%{?dist}
+Version: 4.1.3
+Release: 4%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -58,28 +58,27 @@ Patch1: xen-initscript.patch
 Patch4: xen-dumpdir.patch
 Patch5: xen-net-disable-iptables-on-bridge.patch
 
-Patch10: xen-no-werror.patch
-
-Patch18: localgcc45fix.patch
-Patch20: localgcc451fix.patch
 Patch23: grub-ext4-support.patch
-Patch26: localgcc46fix.patch
 Patch28: pygrubfix.patch
-Patch31: pygrubfix2.patch
-Patch32: xen-4.1-testing.23190.patch
-Patch33: xend.empty.xml.patch
 Patch34: xend.catchbt.patch
 Patch35: xend-pci-loop.patch
-Patch36: localgcc47fix.patch
-Patch37: qemu-xen-4.1-testing.git-3cf61880403b4e484539596a95937cc066243388.patch
 Patch38: xen-backend.rules.patch
-Patch39: xend.selinux.setuid.patch
+Patch39: xend.selinux.fixes.patch
+Patch40: pygrub.size.limits.patch
+Patch45: xen-no-pyxml.patch
 
 Patch50: upstream-23936:cdb34816a40a-rework
 Patch51: upstream-23937:5173834e8476
 Patch52: upstream-23938:fa04fbd56521-rework
 Patch53: upstream-23939:51288f69523f-rework
 Patch54: upstream-23940:187d59e32a58
+
+Patch60: xen-4.1-testing.23349.patch
+Patch61: xen-4.1-testing.23350.patch
+Patch62: xen-4.1-testing.23351.patch
+Patch63: xen-4.1-testing.23352.patch
+Patch64: qemu-xen-4.1-testing.git-3220480734832a148d26f7a81f90af61c2ecfdd9.patch
+Patch65: qemu-xen-4.1-testing.git-d7d453f51459b591faa96d1c123b5bfff7c5b6b6.patch
 
 Patch100: xen-configure-xend.patch
 
@@ -111,7 +110,7 @@ BuildRequires: bzip2-devel xz-devel
 # libfsimage
 BuildRequires: e2fsprogs-devel
 Requires: bridge-utils
-Requires: PyXML
+Requires: python-lxml
 Requires: udev >= 059
 Requires: xen-runtime = %{version}-%{release}
 # Not strictly a dependency, but kpartx is by far the most useful tool right
@@ -224,27 +223,26 @@ manage Xen virtual machines.
 %patch4 -p1
 %patch5 -p1
 
-%patch10 -p1
-
-%patch18 -p1
-%patch20 -p1
-%patch26 -p1
 %patch28 -p1
-%patch31 -p1
-%patch32 -p1
-%patch33 -p1
 %patch34 -p1
 %patch35 -p1
-%patch36 -p1
-%patch37 -p1
 %patch38 -p1
 %patch39 -p1
+%patch40 -p1
+%patch45 -p1
 
 %patch50 -p1
 %patch51 -p1
 %patch52 -p1
 %patch53 -p1
 %patch54 -p1
+
+%patch60 -p1
+%patch61 -p1
+%patch62 -p1
+%patch63 -p1
+%patch64 -p1
+%patch65 -p1
 
 %patch100 -p1
 
@@ -438,6 +436,7 @@ fi
 %endif
 %if %with_systemd
 /bin/systemctl enable xenstored.service
+/bin/systemctl enable xenconsoled.service
 %endif
 
 %if %with_sysv
@@ -455,6 +454,7 @@ if [ $1 = 0 ]; then
 %endif
 %if %with_systemd
   /bin/systemctl disable xenstored.service
+  /bin/systemctl disable xenconsoled.service
 %endif
 fi
 
@@ -701,6 +701,68 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Sep 06 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.3-4
+- disable qemu monitor by default [XSA-19, CVE-2012-4411] (#855141)
+
+* Wed Sep 05 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.3-3
+- 5 security fixes
+  a malicious 64-bit PV guest can crash the dom0 [XSA-12, CVE-2012-3494]
+    (#854585)
+  a malicious crash might be able to crash the dom0 or escalate privileges
+    [XSA-13, CVE-2012-3495] (#854589)
+  a malicious PV guest can crash the dom0 [XSA-14, CVE-2012-3496] (#854590)
+  a malicious HVM guest can crash the dom0 and might be able to read
+    hypervisor or guest memory [XSA-16, CVE-2012-3498] (#854593)
+  an HVM guest could use VT100 escape sequences to escalate privileges to
+    that of the qemu process [XSA-17, CVE-2012-3515] (#854599)
+
+* Fri Aug 10 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.3-1 4.1.3-2
+- update to 4.1.3
+  includes fix for untrusted HVM guest can cause the dom0 to hang or
+    crash [XSA-11, CVE-2012-3433] (#843582)
+- remove patches that are now upstream
+- remove some unnecessary compile fixes
+- adjust upstream-23936:cdb34816a40a-rework for backported fix for
+    upstream-23940:187d59e32a58
+- replace pygrub.size.limits.patch with upstreamed version
+- fix for (#845444) broke xend under systemd
+
+* Tue Aug 07 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.2-25
+- remove some unnecessary cache flushing that slow things down
+- change python options on xend to reduce selinux problems (#845444)
+
+* Thu Jul 26 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.2-24
+- in rare circumstances an unprivileged user can crash an HVM guest
+  [XSA-10,CVE-2012-3432] (#843766)
+
+* Tue Jul 24 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.2-23
+- add a patch to remove a dependency on PyXML and Require python-lxml
+  instead of PyXML (#842843)
+
+* Sun Jul 22 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.2-22
+- adjust systemd service files not to report failures when running without
+  a hypervisor or when xendomains.service doesn't find anything to start
+
+* Sun Jul 22 2012 Fedora Release Engineering <rel-eng@lists.fedoraproject.org> - 4.1.2-21
+- Rebuilt for https://fedoraproject.org/wiki/Fedora_18_Mass_Rebuild
+
+* Tue Jun 12 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.2-20
+- Apply three security patches
+  64-bit PV guest privilege escalation vulnerability [CVE-2012-0217]
+  guest denial of service on syscall/sysenter exception generation
+    [CVE-2012-0218]
+  PV guest host Denial of Service [CVE-2012-2934]
+
+* Sat Jun 09 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.2-19
+- adjust xend.service systemd file to avoid selinux problems
+
+* Fri Jun 08 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.2-18
+- Enable xenconsoled by default under systemd (#829732)
+
+* Thu May 17 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.2-16 4.1.2-17
+- make pygrub cope better with big files from guest (#818412 CVE-2012-2625)
+- add patch from 4.1.3-rc2-pre to build on F17/8
+
 * Sun Apr 15 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.2-15
 - Make the udev tap rule more specific as it breaks openvpn (#812421)
 - don't try setuid in xend if we don't need to so selinux is happier
