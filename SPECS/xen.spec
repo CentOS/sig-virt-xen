@@ -7,19 +7,11 @@
 # --without efi
 %define build_efi %{?_without_efi: 0} %{?!_without_efi: 1}
 # xen only supports efi boot images on x86_64
-%ifnarch x86_64
+
+#for el6
 %define build_efi 0
-%endif
-%if "%dist" >= ".fc17"
-%define with_sysv 0
-%else
 %define with_sysv 1
-%endif
-%if "%dist" >= ".fc15"
-%define with_systemd 1
-%else
 %define with_systemd 0
-%endif
 
 # Hypervisor ABI
 %define hv_abi  4.2
@@ -27,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 1%{?dist}
+Release: 1.1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -81,9 +73,6 @@ Patch100: xen-configure-xend.patch
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
 BuildRequires: libX11-devel python-devel ghostscript texlive-latex
-%if "%dist" >= ".fc18"
-BuildRequires: texlive-times texlive-courier texlive-helvetic texlive-ntgclass
-%endif
 BuildRequires: ncurses-devel gtk2-devel libaio-devel
 # for the docs
 BuildRequires: perl texinfo graphviz
@@ -729,6 +718,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Jan  4 2013 Johnny Hughes <johnny@centos.org> - 4.2.1-1.1
+- set build_efi 0, with_sysv 1,  with_systemd 0  
+- remove the BuildRequires that are specific to .f18 dist
+
 * Tue Dec 18 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.1-1
 - update to xen-4.2.1
 - remove patches that are included in 4.2.1
