@@ -26,8 +26,8 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.2.0
-Release: 6%{?dist}
+Version: 4.2.1
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -73,19 +73,8 @@ Patch46: xen.use.fedora.seabios.patch
 Patch47: xen.use.fedora.ipxe.patch
 Patch48: qemu-xen.tradonly.patch
 Patch49: xen.fedora.efi.build.patch
-Patch50: xen.git-fdd0127ae221c1d7da709a7a5b2321fd7c239652.patch
-Patch51: xsa20.patch
-Patch52: xsa22-4.2-unstable.patch
-Patch53: xsa23-4.2-unstable.patch
-Patch54: xsa24.patch
 Patch55: qemu-xen.trad.buildfix.patch
 Patch56: xen.fedora19.buildfix.patch
-Patch57: xsa26-4.2.patch
-Patch58: xsa27-4.2.patch
-Patch59: xsa29-4.2-unstable.patch
-Patch60: xsa30-4.2.patch
-Patch61: xsa31-4.2-unstable.patch
-Patch62: xsa32-4.2.patch
 
 Patch100: xen-configure-xend.patch
 
@@ -249,19 +238,8 @@ manage Xen virtual machines.
 %patch47 -p1
 %patch48 -p1
 %patch49 -p1
-%patch50 -p1
-%patch51 -p1
-%patch52 -p1
-%patch53 -p1
-%patch54 -p1
 %patch55 -p1
 %patch56 -p1
-%patch57 -p1
-%patch58 -p1
-%patch59 -p1
-%patch60 -p1
-%patch61 -p1
-%patch62 -p1
 
 %patch100 -p1
 
@@ -751,6 +729,14 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Dec 18 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.1-1
+- update to xen-4.2.1
+- remove patches that are included in 4.2.1
+- rebase xen.fedora.efi.build.patch
+
+* Thu Dec 13 2012 Richard W.M. Jones <rjones@redhat.com> - 4.2.0-7
+- Rebuild for OCaml fix (RHBZ#877128).
+
 * Mon Dec 03 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.0-6
 - 6 security fixes
   A guest can cause xen to crash [XSA-26, CVE-2012-5510] (#883082)
@@ -761,7 +747,7 @@ rm -rf %{buildroot}
   An HVM guest can cause xen to hang [XSA-30, CVE-2012-5514] (#883091)
   A guest can cause xen to hang [XSA-31, CVE-2012-5515] (#883092)
   A PV guest can cause xen to crash and might be able escalate privileges
-    [XSA-32, CVE-2012-5525] (#883092)
+    [XSA-32, CVE-2012-5525] (#883094)
 
 * Sat Nov 17 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.0-5
 - two build fixes for Fedora 19
