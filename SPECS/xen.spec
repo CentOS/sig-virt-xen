@@ -27,7 +27,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 1%{?dist}
+Release: 1.1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -105,7 +105,7 @@ BuildRequires: libuuid-devel
 # iasl needed to build hvmloader
 BuildRequires: iasl
 # build using Fedora seabios and ipxe packages for roms
-BuildRequires: seabios-bin ipxe-roms-qemu
+BuildRequires: seabios-bin 
 # modern compressed kernels
 BuildRequires: bzip2-devel xz-devel
 # libfsimage
@@ -729,6 +729,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jan  3 2013 Johnny Hughes <johnny@centos.org> - 4.2.1-1.1
+- remove ipxe-roms-qemu for el6
+
 * Tue Dec 18 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.1-1
 - update to xen-4.2.1
 - remove patches that are included in 4.2.1
