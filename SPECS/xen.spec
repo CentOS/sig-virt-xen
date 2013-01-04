@@ -3,23 +3,16 @@
 # or ocamlopt is missing (the xen makefile doesn't build ocaml bits if it isn't there)
 %define with_ocaml  %{?_without_ocaml: 0} %{?!_without_ocaml: 1}
 %define build_ocaml %(test -x %{_bindir}/ocamlopt && echo %{with_ocaml} || echo 0)
-# build an efi boot image (where supported) unless rpmbuild was run with
-# --without efi
-%define build_efi %{?_without_efi: 0} %{?!_without_efi: 1}
-# xen only supports efi boot images on x86_64
-
-#for el6
-%define build_efi 0
 %define with_sysv 1
 %define with_systemd 0
 
 # Hypervisor ABI
-%define hv_abi  4.2
+%define hv_abi  4.1
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.2.1
-Release: 1.1%{?dist}
+Version: 4.1.4
+Release: 1%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -32,6 +25,7 @@ Source11: newlib-1.16.0.tar.gz
 Source12: zlib-1.2.3.tar.gz
 Source13: pciutils-2.2.9.tar.bz2
 Source14: grub-0.97.tar.gz
+Source15: ipxe-git-v1.0.0.tar.gz
 # init.d bits
 Source20: init.xenstored
 Source21: init.xenconsoled
@@ -51,39 +45,35 @@ Source45: xenconsoled.service
 Source46: xen-watchdog.service
 Source47: xendomains.service
 Source48: libexec.xendomains
-Source49: tmpfiles.d.xen.conf
 
 Patch1: xen-initscript.patch
 Patch4: xen-dumpdir.patch
 Patch5: xen-net-disable-iptables-on-bridge.patch
 
+Patch23: grub-ext4-support.patch
 Patch28: pygrubfix.patch
 Patch34: xend.catchbt.patch
 Patch35: xend-pci-loop.patch
+Patch38: xen-backend.rules.patch
 Patch39: xend.selinux.fixes.patch
-Patch46: xen.use.fedora.seabios.patch
-Patch47: xen.use.fedora.ipxe.patch
-Patch48: qemu-xen.tradonly.patch
-Patch49: xen.fedora.efi.build.patch
-Patch55: qemu-xen.trad.buildfix.patch
-Patch56: xen.fedora19.buildfix.patch
+Patch45: xen-no-pyxml.patch
+
+Patch50: upstream-23936:cdb34816a40a-rework
+Patch51: upstream-23937:5173834e8476
+Patch52: upstream-23938:fa04fbd56521-rework
+Patch53: upstream-23939:51288f69523f-rework
+Patch54: upstream-23940:187d59e32a58
 
 Patch100: xen-configure-xend.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
-BuildRequires: libX11-devel python-devel ghostscript texlive-latex
+BuildRequires: libX11-devel python-devel ghostscript tetex-latex
 BuildRequires: ncurses-devel gtk2-devel libaio-devel
 # for the docs
-BuildRequires: perl texinfo graphviz
+BuildRequires: perl texinfo
 # so that the makefile knows to install udev rules
 BuildRequires: udev
-%ifnarch ia64
-# so that x86_64 builds pick up glibc32 correctly
-BuildRequires: /usr/include/gnu/stubs-32.h
-# for the VMX "bios"
-BuildRequires: dev86
-%endif
 BuildRequires: gettext
 BuildRequires: gnutls-devel
 BuildRequires: openssl-devel
@@ -93,14 +83,10 @@ BuildRequires: pciutils-devel
 BuildRequires: libuuid-devel
 # iasl needed to build hvmloader
 BuildRequires: iasl
-# build using Fedora seabios and ipxe packages for roms
-BuildRequires: seabios-bin ipxe-roms-qemu
 # modern compressed kernels
 BuildRequires: bzip2-devel xz-devel
 # libfsimage
 BuildRequires: e2fsprogs-devel
-# tools now require yajl
-BuildRequires: yajl-devel
 Requires: bridge-utils
 Requires: python-lxml
 Requires: udev >= 059
@@ -114,10 +100,6 @@ ExclusiveArch: %{ix86} x86_64 ia64
 #ExclusiveArch: %{ix86} x86_64 ia64 noarch
 %if %with_ocaml
 BuildRequires: ocaml, ocaml-findlib
-%endif
-# efi image needs an ld that has -mi386pep option
-%if %build_efi
-BuildRequires: mingw64-binutils
 %endif
 
 %description
@@ -222,32 +204,31 @@ manage Xen virtual machines.
 %patch28 -p1
 %patch34 -p1
 %patch35 -p1
+%patch38 -p1
 %patch39 -p1
-%patch46 -p1
-%patch47 -p1
-%patch48 -p1
-%patch49 -p1
-%patch55 -p1
-%patch56 -p1
+%patch45 -p1
+
+%patch50 -p1
+%patch51 -p1
+%patch52 -p1
+%patch53 -p1
+%patch54 -p1
 
 %patch100 -p1
 
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
+cp -v %{PATCH23} stubdom/grub.patches/99grub-ext4-support.patch
+cp -v %{SOURCE15} tools/firmware/etherboot/ipxe.tar.gz
 
 
 %build
 %if !%build_ocaml
 %define ocaml_flags OCAML_TOOLS=n
 %endif
-%if %build_efi
-%define efi_flags LD_EFI=/usr/x86_64-w64-mingw32/bin/ld
-mkdir -p dist/install/boot/efi/efi/fedora
-%endif
 export XEN_VENDORVERSION="-%{release}"
 export CFLAGS="$RPM_OPT_FLAGS"
-make %{?_smp_mflags} %{?efi_flags} prefix=/usr dist-xen
-./configure --libdir=%{_libdir}
+make %{?_smp_mflags} prefix=/usr dist-xen
 make %{?_smp_mflags} %{?ocaml_flags} prefix=/usr dist-tools
 make                 prefix=/usr dist-docs
 unset CFLAGS
@@ -259,16 +240,10 @@ rm -rf %{buildroot}
 %if %build_ocaml
 mkdir -p %{buildroot}%{_libdir}/ocaml/stublibs
 %endif
-%if %build_efi
-mkdir -p %{buildroot}/boot/efi/efi/fedora
-%endif
-make DESTDIR=%{buildroot} %{?efi_flags}  prefix=/usr install-xen
+make DESTDIR=%{buildroot} prefix=/usr install-xen
 make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-tools
 make DESTDIR=%{buildroot} prefix=/usr install-docs
 make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-stubdom
-%if %build_efi
-mv %{buildroot}/boot/efi/efi %{buildroot}/boot/efi/EFI
-%endif
 
 ############ debug packaging: list files ############
 
@@ -310,11 +285,6 @@ rm -rf %{buildroot}/usr/info
 
 # adhere to Static Library Packaging Guidelines
 rm -rf %{buildroot}/%{_libdir}/*.a
-
-%if %build_efi
-# clean up extra efi files
-rm -rf %{buildroot}/%{_libdir}/efi
-%endif
 
 ############ fixup files in /etc ############
 
@@ -365,8 +335,6 @@ install -m 644 %{SOURCE46} %{buildroot}%{_unitdir}/xen-watchdog.service
 install -m 644 %{SOURCE47} %{buildroot}%{_unitdir}/xendomains.service
 mkdir -p %{buildroot}%{_libexecdir}
 install -m 644 %{SOURCE48} %{buildroot}%{_libexecdir}/xendomains
-mkdir -p %{buildroot}/usr/lib/tmpfiles.d
-install -m 644 %{SOURCE49} %{buildroot}/usr/lib/tmpfiles.d/xen.conf
 %endif
 
 # config file only used for hotplug, Fedora uses udev instead
@@ -550,7 +518,6 @@ rm -rf %{buildroot}
 %{_unitdir}/blktapctrl.service
 %{_unitdir}/xenconsoled.service
 %{_unitdir}/xen-watchdog.service
-/usr/lib/tmpfiles.d/xen.conf
 %endif
 
 %config(noreplace) %{_sysconfdir}/sysconfig/xenstored
@@ -559,7 +526,6 @@ rm -rf %{buildroot}
 %config(noreplace) %{_sysconfdir}/sysconfig/xencommons
 %config(noreplace) %{_sysconfdir}/xen/xl.conf
 %config(noreplace) %{_sysconfdir}/xen/cpupool
-%config(noreplace) %{_sysconfdir}/xen/xlexample*
 
 # Auto-load xen backend drivers
 %attr(0755,root,root) %{_sysconfdir}/sysconfig/modules/%{name}.modules
@@ -580,10 +546,6 @@ rm -rf %{buildroot}
 %{_mandir}/man1/xentop.1*
 %{_mandir}/man1/xentrace_format.1*
 %{_mandir}/man8/xentrace.8*
-%{_mandir}/man1/xl.1*
-%{_mandir}/man5/xl.cfg.5*
-%{_mandir}/man5/xl.conf.5*
-%{_mandir}/man5/xlcpupool.cfg.5*
 
 %{python_sitearch}/fsimage.so
 %{python_sitearch}/grub
@@ -598,13 +560,11 @@ rm -rf %{buildroot}
 /usr/lib/%{name}/bin/stubdom-dm
 /usr/lib/%{name}/bin/qemu-dm
 /usr/lib/%{name}/bin/stubdompath.sh
-/usr/lib/%{name}/bin/xenpaging
 %endif
 %dir /usr/lib/%{name}/boot
 # HVM loader is always in /usr/lib regardless of multilib
 /usr/lib/xen/boot/hvmloader
 /usr/lib/xen/boot/ioemu-stubdom.gz
-/usr/lib/xen/boot/xenstore-stubdom.gz
 /usr/lib/xen/boot/pv-grub*.gz
 %endif
 # General Xen state
@@ -652,6 +612,7 @@ rm -rf %{buildroot}
 %{_sbindir}/xenconsoled
 %{_sbindir}/xenlockprof
 %{_sbindir}/xenmon.py*
+%{_sbindir}/xenpaging
 %{_sbindir}/xentop
 %{_sbindir}/xentrace_setmask
 %{_sbindir}/xenbaked
@@ -662,8 +623,6 @@ rm -rf %{buildroot}
 %{_sbindir}/xenwatchdogd
 %{_sbindir}/xl
 %{_sbindir}/xsview
-%{_sbindir}/xen-lowmemd
-%{_sbindir}/xen-ringwatch
 
 # Xen logfiles
 %dir %attr(0700,root,root) %{_localstatedir}/log/xen
@@ -675,9 +634,6 @@ rm -rf %{buildroot}
 /boot/xen-syms-*
 /boot/xen-*.gz
 /boot/xen.gz
-%if %build_efi
-/boot/efi/EFI/fedora/*.efi
-%endif
 
 %files doc
 %defattr(-,root,root)
@@ -690,8 +646,6 @@ rm -rf %{buildroot}
 %{_includedir}/*.h
 %dir %{_includedir}/xen
 %{_includedir}/xen/*
-%dir %{_includedir}/xenstore-compat
-%{_includedir}/xenstore-compat/*
 %{_libdir}/*.so
 
 %files licenses
@@ -708,7 +662,6 @@ rm -rf %{buildroot}
 %{_libdir}/ocaml/stublibs/*.so
 %{_libdir}/ocaml/stublibs/*.so.owner
 %{_sbindir}/oxenstored
-%config(noreplace) %{_sysconfdir}/xen/oxenstored.conf
 
 %files ocaml-devel
 %defattr(-,root,root)
@@ -718,74 +671,37 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
-* Fri Jan  4 2013 Johnny Hughes <johnny@centos.org> - 4.2.1-1.1
-- set build_efi 0, with_sysv 1,  with_systemd 0  
-- remove the BuildRequires that are specific to .f18 dist
+* Tue Dec 18 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.4-1
+- update to xen-4.1.4
+- remove patches that are included in 4.1.4
 
-* Tue Dec 18 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.1-1
-- update to xen-4.2.1
-- remove patches that are included in 4.2.1
-- rebase xen.fedora.efi.build.patch
-
-* Thu Dec 13 2012 Richard W.M. Jones <rjones@redhat.com> - 4.2.0-7
-- Rebuild for OCaml fix (RHBZ#877128).
-
-* Mon Dec 03 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.0-6
+* Tue Dec 04 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.3-7
 - 6 security fixes
   A guest can cause xen to crash [XSA-26, CVE-2012-5510] (#883082)
   An HVM guest can cause xen to run slowly or crash [XSA-27, CVE-2012-5511]
     (#883084)
+  An HVM guest can cause xen to crash or leak information [XSA-28,
+    CVE-2012-5512] (#883085)
   A PV guest can cause xen to crash and might be able escalate privileges
     [XSA-29, CVE-2012-5513] (#883088)
   An HVM guest can cause xen to hang [XSA-30, CVE-2012-5514] (#883091)
   A guest can cause xen to hang [XSA-31, CVE-2012-5515] (#883092)
-  A PV guest can cause xen to crash and might be able escalate privileges
-    [XSA-32, CVE-2012-5525] (#883094)
 
-* Sat Nov 17 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.0-5
-- two build fixes for Fedora 19
-- add texlive-ntgclass package to fix build
-
-* Tue Nov 13 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.0-4
-- 4 security fixes
+* Tue Nov 13 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.3-6
+- 5 security fixes
   A guest can block a cpu by setting a bad VCPU deadline [XSA 20,
     CVE-2012-4535] (#876198)
+  HVM guest can use invalid pirq values to crash xen [XSA 21, CVE-2012-4536]
+    (#876200)
   HVM guest can exhaust p2m table crashing xen [XSA 22, CVE-2012-4537] (#876203)
   PAE HVM guest can crash hypervisor [XSA-23, CVE-2012-4538] (#876205)
   32-bit PV guest on 64-bit hypervisor can cause an hypervisor infinite
     loop [XSA-24, CVE-2012-4539] (#876207)
-- texlive-2012 is now in Fedora 18
 
-* Sun Oct 28 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.0-3
-- texlive-2012 isn't in Fedora 18 yet
-
-* Fri Oct 26 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.0-2
+* Sun Oct 28 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.3-5
 - limit the size of guest kernels and ramdisks to avoid running out
-  of memeory on dom0 during guest boot [XSA-25, CVE-2012-4544] (#870414)
-
-* Thu Oct 25 2012 Michael Young <m.a.young@durham.ac.uk> - 4.2.0-1
-- update to xen-4.2.0
-- rebase xen-net-disable-iptables-on-bridge.patch pygrubfix.patch
-- remove patches that are now upstream or with alternatives upstream
-- use ipxe and seabios from seabios-bin and ipxe-roms-qemu packages
-- xen tools now need ./configure to be run (x86_64 needs libdir set)
-- don't build upstream qemu version
-- amend list of files in package - relocate xenpaging
-  add /etc/xen/xlexample* oxenstored.conf /usr/include/xenstore-compat/*
-      xenstore-stubdom.gz xen-lowmemd xen-ringwatch xl.1.gz xl.cfg.5.gz
-      xl.conf.5.gz xlcpupool.cfg.5.gz
-- use a tmpfiles.d file to create /run/xen on boot
-- add BuildRequires for yajl-devel and graphviz
-- build an efi boot image where it is supported
-- adjust texlive changes so spec file still works on Fedora 17
-
-* Thu Oct 18 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.3-6
-- add font packages to build requires due to 2012 version of texlive in F19
-- use build requires of texlive-latex instead of tetex-latex which it
-  obsoletes
-
-* Wed Oct 17 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.3-5
-- rebuild for ocaml update
+  of memory on dom0 during guest boot [XSA-25, CVE-2012-4544] (#870414)
+- remove pygrub.size.limits.patch patch included in new patch
 
 * Thu Sep 06 2012 Michael Young <m.a.young@durham.ac.uk> - 4.1.3-4
 - disable qemu monitor by default [XSA-19, CVE-2012-4411] (#855141)
@@ -1023,7 +939,7 @@ rm -rf %{buildroot}
 - add patch to remove some old device creation code that doesn't
   work with the latest pvops kernels
 
-* Mon Jun 7 2010 Michael Young <m.a.young@durham.ac.uk> - 4.0.0-1
+* Tue Jun 7 2010 Michael Young <m.a.young@durham.ac.uk> - 4.0.0-1
 - update to 4.0.0 release
 - rebase xen-initscript.patch and xen-dumpdir.patch patches
 - adjust spec file for files added to or removed from the packages
@@ -1043,14 +959,14 @@ rm -rf %{buildroot}
 - update to 3.4.2 release.
 - drop backport patches.
 
-* Thu Oct 8 2009 Justin M. Forbes <jforbes@redhat.com> - 3.4.1-5
+* Fri Oct 8 2009 Justin M. Forbes <jforbes@redhat.com> - 3.4.1-5
 - add PyXML to dependencies. (#496135)
 - Take ownership of {_libdir}/fs (#521806)
 
 * Mon Sep 14 2009 Gerd Hoffmann <kraxel@redhat.com> - 3.4.1-4
 - add e2fsprogs-devel to build dependencies.
 
-* Wed Sep 2 2009 Gerd Hoffmann <kraxel@redhat.com> - 3.4.1-3
+* Tue Sep 2 2009 Gerd Hoffmann <kraxel@redhat.com> - 3.4.1-3
 - swap bzip2+xz linux kernel compression support patches.
 - backport one more bugfix (videoram option).
 
@@ -1648,7 +1564,7 @@ rm -rf %{buildroot}
 - upgrade to today's Xen snapshot
 - change the version to 3.0-0.<date> (real 3.0 release will be 3.0-1)
 
-* Tue Aug 23 2005 Rik van Riel <riel@redhat.com> 2-20050823
+* Mon Aug 23 2005 Rik van Riel <riel@redhat.com> 2-20050823
 - upgrade to today's Xen snapshot
 
 * Mon Aug 15 2005 Rik van Riel <riel@redhat.com> 2-20050726
