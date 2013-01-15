@@ -1,8 +1,0 @@
---- xen-4.1.2/tools/hotplug/Linux/xen-backend.rules.orig	2011-10-20 18:05:42.000000000 +0100
-+++ xen-4.1.2/tools/hotplug/Linux/xen-backend.rules	2012-04-15 17:08:24.774955932 +0100
-@@ -13,4 +13,4 @@
- KERNEL=="gntdev", NAME="xen/%k", MODE="0600"
- KERNEL=="pci_iomul", NAME="xen/%k", MODE="0600"
- KERNEL=="tapdev[a-z]*", NAME="xen/blktap-2/tapdev%m", MODE="0600"
--SUBSYSTEM=="net", KERNEL=="tap*", ACTION=="add", RUN+="/etc/xen/scripts/vif-setup $env{ACTION} type_if=tap"
-+SUBSYSTEM=="net", KERNEL=="tap[0-9]*.[0-9]*", ACTION=="add", RUN+="/etc/xen/scripts/vif-setup $env{ACTION} type_if=tap"
