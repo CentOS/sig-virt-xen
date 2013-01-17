@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 1.1%{?dist}.2
+Release: 1.1%{?dist}.3
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -227,7 +227,7 @@ manage Xen virtual machines.
 %patch35 -p1
 %patch39 -p1
 %patch46 -p1
-#%patch47 -p1
+%patch47 -p1
 #%patch48 -p1
 %patch49 -p1
 %patch55 -p1
@@ -734,7 +734,7 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
-* Thu Jan 17 2013 Karanbir Singh <kbsingh@centos.org> - 4.2.1-1.1.el6.centos.2
+* Thu Jan 17 2013 Karanbir Singh <kbsingh@centos.org> - 4.2.1-1.1.el6.centos.3
 - build with seabious and gpxe
 - gpxe does not work, fall back to ipxe
 - build with included qemu-xen
