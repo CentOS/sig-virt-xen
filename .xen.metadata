@@ -4,5 +4,6 @@
 841edec33d19a9e549984982fb92445ee967e265 SOURCES/newlib-1.16.0.tar.gz
 da052c8de5f3485fe0253c19cf52ed6d72528485 SOURCES/ipxe-git-v1.0.0.tar.gz
 60faeaaf250642db5c0ea36cd6dcc9f99c8f3902 SOURCES/zlib-1.2.3.tar.gz
+5abba8e9a685ff4bdbb87ab64a0b840845c84820 SOURCES/qemu-xen-4.2.1.tar.gz
+db584cb0a0cc614888d7df3b196d514fdb2edd6e SOURCES/xen-4.1.2.tar.gz
 12672c072b97c9b70d2f5e4b6b7f6487f7193d11 SOURCES/xen-4.2.1.tar.gz
-5abba8e9a685ff4bdbb87ab64a0b840845c84820  SOURCES/qemu-xen-4.2.1.tar.gz
