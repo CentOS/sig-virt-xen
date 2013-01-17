@@ -64,7 +64,7 @@ Patch34: xend.catchbt.patch
 Patch35: xend-pci-loop.patch
 Patch39: xend.selinux.fixes.patch
 Patch46: xen.use.fedora.seabios.patch
-#Patch47: xen.use.fedora.ipxe.patch
+Patch47: xen.use.fedora.ipxe.patch
 #Patch48: qemu-xen.tradonly.patch
 Patch49: xen.fedora.efi.build.patch
 Patch55: qemu-xen.trad.buildfix.patch
@@ -98,8 +98,7 @@ BuildRequires: libuuid-devel
 # iasl needed to build hvmloader
 BuildRequires: iasl
 # build using Fedora seabios and ipxe packages for roms
-#BuildRequires: seabios-bin ipxe-roms-qemu
-BuildRequires: seabios gpxe-roms-qemu
+BuildRequires: seabios ipxe-roms-qemu
 # modern compressed kernels
 BuildRequires: bzip2-devel xz-devel
 # libfsimage
