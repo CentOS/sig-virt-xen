@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 1.1%{?dist}
+Release: 1.1%{?dist}.2
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -53,6 +53,8 @@ Source47: xendomains.service
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
 
+Source100: qemu-xen-%{version}.tar.gz
+
 Patch1: xen-initscript.patch
 Patch4: xen-dumpdir.patch
 Patch5: xen-net-disable-iptables-on-bridge.patch
@@ -62,13 +64,15 @@ Patch34: xend.catchbt.patch
 Patch35: xend-pci-loop.patch
 Patch39: xend.selinux.fixes.patch
 Patch46: xen.use.fedora.seabios.patch
-Patch47: xen.use.fedora.ipxe.patch
-Patch48: qemu-xen.tradonly.patch
+#Patch47: xen.use.fedora.ipxe.patch
+#Patch48: qemu-xen.tradonly.patch
 Patch49: xen.fedora.efi.build.patch
 Patch55: qemu-xen.trad.buildfix.patch
 Patch56: xen.fedora19.buildfix.patch
 
 Patch100: xen-configure-xend.patch
+
+Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -94,7 +98,8 @@ BuildRequires: libuuid-devel
 # iasl needed to build hvmloader
 BuildRequires: iasl
 # build using Fedora seabios and ipxe packages for roms
-BuildRequires: seabios-bin ipxe-roms-qemu
+#BuildRequires: seabios-bin ipxe-roms-qemu
+BuildRequires: seabios gpxe-roms-qemu
 # modern compressed kernels
 BuildRequires: bzip2-devel xz-devel
 # libfsimage
@@ -141,7 +146,6 @@ which manage Xen virtual machines.
 Summary: Core Xen runtime environment
 Group: Development/Libraries
 Requires: xen-libs = %{version}-%{release}
-#Requires: /usr/bin/qemu-img /usr/bin/qemu-nbd
 Requires: /usr/bin/qemu-img
 # Ensure we at least have a suitable kernel installed, though we can't
 # force user to actually boot it.
@@ -224,13 +228,18 @@ manage Xen virtual machines.
 %patch35 -p1
 %patch39 -p1
 %patch46 -p1
-%patch47 -p1
-%patch48 -p1
+#%patch47 -p1
+#%patch48 -p1
 %patch49 -p1
 %patch55 -p1
 %patch56 -p1
 
 %patch100 -p1
+
+%patch1000 -p1
+
+rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/qemu-xen
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE100} 
 
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
@@ -301,6 +310,11 @@ for file in bios.bin openbios-sparc32 openbios-sparc64 ppc_rom.bin \
 do
 	rm -f %{buildroot}/%{_datadir}/xen/qemu/$file
 done
+rm -f %{buildroot}/%{_mandir}/man1/qemu*
+rm -f %{buildroot}/%{_mandir}/man8/qemu*
+mkdir -p %{buildroot}/%{_sysconfdir}/qemu/
+mv %{buildroot}/%{_prefix}/%{_sysconfdir}/qemu/* %{buildroot}/%{_sysconfdir}/qemu/
+rm -rf %{buildroot}/%{_prefix}/%{_sysconfdir}
 
 # README's not intended for end users
 rm -f %{buildroot}/%{_sysconfdir}/xen/README*
@@ -571,6 +585,12 @@ rm -rf %{buildroot}
 %dir %{_libdir}/%{name}
 %dir %{_libdir}/%{name}/bin
 %attr(0700,root,root) %{_libdir}/%{name}/bin/*
+# QEMU-xen runtime files
+%dir %{_datadir}/qemu-xen
+%{_datadir}/qemu-xen/*
+%dir %{_sysconfdir}/qemu/
+%{_sysconfdir}/qemu/target-%{_arch}.conf
+
 # QEMU runtime files
 %dir %{_datadir}/%{name}/qemu
 %dir %{_datadir}/%{name}/qemu/keymaps
@@ -595,10 +615,7 @@ rm -rf %{buildroot}
 %if "%{_libdir}" != "/usr/lib"
 %dir /usr/lib/%{name}
 %dir /usr/lib/%{name}/bin
-/usr/lib/%{name}/bin/stubdom-dm
-/usr/lib/%{name}/bin/qemu-dm
-/usr/lib/%{name}/bin/stubdompath.sh
-/usr/lib/%{name}/bin/xenpaging
+/usr/lib/%{name}/bin/*
 %endif
 %dir /usr/lib/%{name}/boot
 # HVM loader is always in /usr/lib regardless of multilib
@@ -718,6 +735,13 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jan 17 2013 Karanbir Singh <kbsingh@centos.org> - 4.2.1-1.1.el6.centos.2
+- build with seabious and gpxe
+- gpxe does not work, fall back to ipxe
+- build with included qemu-xen
+- drop in upstream qemu-xen-4.2.1
+- upgrade to qemu-upstream-4.2.1
+
 * Fri Jan  4 2013 Johnny Hughes <johnny@centos.org> - 4.2.1-1.1
 - set build_efi 0, with_sysv 1,  with_systemd 0  
 - remove the BuildRequires that are specific to .f18 dist
