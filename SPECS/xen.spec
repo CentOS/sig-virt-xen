@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 1.1%{?dist}.3
+Release: 1.1%{?dist}.4
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -54,6 +54,7 @@ Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
 
 Source100: qemu-xen-%{version}.tar.gz
+Source101: blktap-9960138790b9d3610b12acd153bba20235efa4f5.tar.gz
 
 Patch1: xen-initscript.patch
 Patch4: xen-dumpdir.patch
@@ -73,11 +74,13 @@ Patch56: xen.fedora19.buildfix.patch
 Patch100: xen-configure-xend.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
+Patch1001: xen-centos-disableWerror-blktap25.patch
+Patch1002: xen-centos-enable-blktap2.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
 BuildRequires: libX11-devel python-devel ghostscript texlive-latex
-BuildRequires: ncurses-devel gtk2-devel libaio-devel
+BuildRequires: ncurses-devel gtk2-devel libaio-devel libtool
 # for the docs
 BuildRequires: perl texinfo graphviz
 # so that the makefile knows to install udev rules
@@ -108,6 +111,7 @@ BuildRequires: yajl-devel
 Requires: bridge-utils
 Requires: python-lxml
 Requires: udev >= 059
+Requires: pciutils
 Requires: xen-runtime = %{version}-%{release}
 # Not strictly a dependency, but kpartx is by far the most useful tool right
 # now for accessing domU data from within a dom0 so bring it in when the user
@@ -236,9 +240,18 @@ manage Xen virtual machines.
 %patch100 -p1
 
 %patch1000 -p1
+%patch1002 -p1
 
+pushd `pwd`
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/qemu-xen
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE100} 
+#rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
+%{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
+cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2.5
+./autogen.sh
+./configure --libdir=%{_libdir}
+popd 
+%patch1001 -p1
 
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
@@ -328,6 +341,7 @@ rm -rf %{buildroot}/%{_libdir}/*.a
 # clean up extra efi files
 rm -rf %{buildroot}/%{_libdir}/efi
 %endif
+
 
 ############ fixup files in /etc ############
 
@@ -447,11 +461,13 @@ fi
 %if %with_sysv
 /sbin/chkconfig --add xenconsoled
 /sbin/chkconfig --add xenstored
-#/sbin/chkconfig --add blktapctrl
+/sbin/chkconfig --add xencommons
+/sbin/chkconfig --add blktapctrl
 %endif
 %if %with_systemd
 /bin/systemctl enable xenstored.service
 /bin/systemctl enable xenconsoled.service
+/bin/systemctl enable xencommons.service
 %endif
 
 %if %with_sysv
@@ -465,6 +481,7 @@ if [ $1 = 0 ]; then
 %if %with_sysv
   /sbin/chkconfig --del xenconsoled
   /sbin/chkconfig --del xenstored
+  /sbin/chkconfig --del xencommons
   /sbin/chkconfig --del blktapctrl
 %endif
 %if %with_systemd
@@ -680,6 +697,15 @@ rm -rf %{buildroot}
 %{_sbindir}/xsview
 %{_sbindir}/xen-lowmemd
 %{_sbindir}/xen-ringwatch
+#blktap
+%{_bindir}/vhd-index
+%{_bindir}/vhd-update
+%{_bindir}/vhd-util
+%{_sbindir}/lvm-util
+%{_sbindir}/part-util
+%{_sbindir}/td-rated
+%{_sbindir}/vhdpartx
+%{_libexecdir}/tapdisk
 
 # Xen logfiles
 %dir %attr(0700,root,root) %{_localstatedir}/log/xen
@@ -708,7 +734,14 @@ rm -rf %{buildroot}
 %{_includedir}/xen/*
 %dir %{_includedir}/xenstore-compat
 %{_includedir}/xenstore-compat/*
+%dir %{_includedir}/blktap
+%{_includedir}/blktap/*
+%dir %{_includedir}/vhd
+%{_includedir}/vhd/*
+
 %{_libdir}/*.so
+%{_libdir}/*.la
+
 
 %files licenses
 %defattr(-,root,root)
@@ -734,6 +767,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Jan 22 2013 Karanbir Singh <kbsingh@centos.org> - 4.2.1-1.1.el6.centos.4
+- add xencommons to chkconfig and set it to start 
+- xend needs pciutils 
+- import blktap2.5
+
 * Thu Jan 17 2013 Karanbir Singh <kbsingh@centos.org> - 4.2.1-1.1.el6.centos.3
 - build with seabious and gpxe
 - gpxe does not work, fall back to ipxe
