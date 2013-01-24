@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 1.1%{?dist}.4
+Release: 5.1%{?dist}.5
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -70,6 +70,11 @@ Patch47: xen.use.fedora.ipxe.patch
 Patch49: xen.fedora.efi.build.patch
 Patch55: qemu-xen.trad.buildfix.patch
 Patch56: xen.fedora19.buildfix.patch
+Patch57: xsa33-4.2-unstable.patch
+Patch58: xsa34-4.2.patch
+Patch59: xsa35-4.2-with-xsa34.patch
+Patch61: xsa37-4.2.patch
+Patch63: xsa41.patch
 
 Patch100: xen-configure-xend.patch
 
@@ -244,6 +249,11 @@ manage Xen virtual machines.
 %patch49 -p1
 %patch55 -p1
 %patch56 -p1
+%patch57 -p1
+%patch58 -p1
+%patch59 -p1
+%patch61 -p1
+%patch63 -p1
 
 %patch100 -p1
 
@@ -780,6 +790,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Jan 24 2013 Johnny Hughes <johnny@centos.org> 4.2.1-5.1.el6.centos.5
+- Rolled in patches 57, 58, 59, 61, and 62 to incorporate XSA-33, XSA-34, XSA-35, XSA-37, and XSA-41
+  to fix CVE's 2012-5634, 2012-6075, 2013-0151, 2013-0152, CVE-2013-0154
+- restore status option to xend which is used by libvirt 
+ 
 * Wed Jan 23 2013 Karanbir Singh <kbsingh@centos.org
 - Pull in libxl patch to work with blktap25 (from Stefano )
 - move blktap25 code into tools/blktap and turn off -Werror (from Stefano )
