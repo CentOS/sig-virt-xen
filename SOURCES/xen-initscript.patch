@@ -1,6 +1,6 @@
---- xen-4.1.0/tools/misc/xend.orig	2010-02-02 20:43:01.000000000 +0000
-+++ xen-4.1.0/tools/misc/xend	2010-02-02 21:16:13.000000000 +0000
-@@ -8,103 +8,16 @@
+--- xen-4.2.1/tools/misc/xend.orig	2012-12-17 15:01:18.000000000 +0000
++++ xen-4.2.1/tools/misc/xend	2013-01-22 21:26:39.387953003 +0000
+@@ -8,103 +8,18 @@
  """Xen management daemon.
     Provides console server and HTTP management api.
  
@@ -97,7 +97,8 @@
 -        start_blktapctrl()
 -        return daemon.stop() or daemon.start()
 -    elif sys.argv[1] == 'status':
--        return daemon.status()
++    if sys.argv[1:] and sys.argv[1] == 'status':
+         return daemon.status()
 -    else:
 -        print 'not an option:', sys.argv[1]
 -    return 1
