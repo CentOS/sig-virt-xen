@@ -1,0 +1,13 @@
+diff --git a/tools/libxl/libxl_event.c b/tools/libxl/libxl_event.c
+index aea58bb..06a29f2 100644
+--- a/tools/libxl/libxl_event.c
++++ b/tools/libxl/libxl_event.c
+@@ -184,7 +184,7 @@ static int time_register_finite(libxl__gc *gc, libxl__ev_time *ev,
+ static void time_deregister(libxl__gc *gc, libxl__ev_time *ev)
+ {
+     if (!ev-&gt;infinite) {
+-        OSEVENT_HOOK_VOID(timeout_deregister, &amp;ev-&gt;for_app_reg);
++        OSEVENT_HOOK_VOID(timeout_deregister, ev-&gt;for_app_reg);
+         LIBXL_TAILQ_REMOVE(&amp;CTX-&gt;etimes, ev, entry);
+     }
+ }
