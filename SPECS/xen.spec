@@ -75,7 +75,14 @@ Patch100: xen-configure-xend.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
-Patch1002: xen-centos-enable-blktap2.patch
+#Patch1002: xen-centos-enable-blktap2.patch
+Patch1003: xen-centos-libxl-with-blktap25.patch
+
+# Integrate libxl with libvirt, prep
+Patch1010: xen-centos-libxl_rename-abs-variables-to-absolute.patch
+Patch1011: xen-centos-libxl_Fix-passing-of-application-data-to-timeout_deregister-hook.patch
+Patch1012: xen-centos-libxl_fix-stale-fd-event-callback-race.patch
+Patch1013: xen-centos-libxl_fix-stale-timeout-event-callback-race.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -164,6 +171,7 @@ Summary: Libraries for Xen tools
 Group: Development/Libraries
 Provides: xen-hypervisor-abi = %{hv_abi}
 Requires: xen-licenses
+Requires: kernel >= 3.4.26
 
 %description hypervisor
 This package contains the Xen hypervisor
@@ -240,18 +248,26 @@ manage Xen virtual machines.
 %patch100 -p1
 
 %patch1000 -p1
-%patch1002 -p1
+#%patch1002 -p1
 
 pushd `pwd`
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/qemu-xen
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE100} 
-#rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
+rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
-cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2.5
+cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 ./autogen.sh
-./configure --libdir=%{_libdir}
+./configure --libdir=%{_libdir} --prefix=/user --libexecdir=/usr/lib/xen/bin
 popd 
 %patch1001 -p1
+%patch1003 -p1
+
+# disabling these for now, revisit once we have libvirt happy
+#%patch1010 -p1
+#%patch1011 -p1
+#%patch1012 -p1
+#%patch1013 -p1
+
 
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
@@ -673,10 +689,8 @@ rm -rf %{buildroot}
 %{_sbindir}/gdbsx
 %{_sbindir}/gtrace*
 %{_sbindir}/kdd
-%{_sbindir}/lock-util
 %{_sbindir}/tap-ctl
 %{_sbindir}/td-util
-%{_sbindir}/vhd-*
 %{_sbindir}/xen-bugtool
 %{_sbindir}/xen-hptool
 %{_sbindir}/xen-hvmcrash
@@ -705,7 +719,6 @@ rm -rf %{buildroot}
 %{_sbindir}/part-util
 %{_sbindir}/td-rated
 %{_sbindir}/vhdpartx
-%{_libexecdir}/tapdisk
 
 # Xen logfiles
 %dir %attr(0700,root,root) %{_localstatedir}/log/xen
@@ -767,6 +780,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Jan 23 2013 Karanbir Singh <kbsingh@centos.org
+- Pull in libxl patch to work with blktap25 (from Stefano )
+- move blktap25 code into tools/blktap and turn off -Werror (from Stefano )
+- Make kernel 3.4.26+ a hard Requires for the xen-hypervisor
+
 * Tue Jan 22 2013 Karanbir Singh <kbsingh@centos.org> - 4.2.1-1.1.el6.centos.4
 - add xencommons to chkconfig and set it to start 
 - xend needs pciutils 
