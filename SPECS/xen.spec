@@ -265,7 +265,7 @@ rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/qemu-xen
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE100} 
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
-cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2.5
+cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 ./autogen.sh
 ./configure --libdir=%{_libdir} --prefix=/user --libexecdir=/usr/lib/xen/bin
 popd 
