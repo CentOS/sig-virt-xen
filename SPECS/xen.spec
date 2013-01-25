@@ -674,7 +674,7 @@ rm -rf %{buildroot}
 # Xenstore persistent state
 %dir %{_localstatedir}/lib/xenstored
 # Xenstore runtime state
-%dir %{_localstatedir}/run/xenstored
+%dir %attr(0700,root,root) %{_localstatedir}/run/xenstored
 # XenD runtime state
 %ghost %attr(0700,root,root) %{_localstatedir}/run/xend
 %ghost %attr(0700,root,root) %{_localstatedir}/run/xend/boot

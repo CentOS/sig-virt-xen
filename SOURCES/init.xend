@@ -31,6 +31,17 @@ fi
 
 # Default config params
 start() {
+	#set selinux to permissive to run xend
+	selinux_is="$(/usr/sbin/getenforce)"
+	if [ "$selinux_is" = "Enforcing" ]; then
+	  /usr/sbin/setenforce 0
+	fi
+	# remove the blktap interface to use xm
+	blktap_is="$(/sbin/lsmod | /bin/grep '^blktap ' | /bin/awk {'print $1'} )"
+	if [ "$blktap_is" == "blktap" ]; then
+	  /sbin/rmmod blktap
+	fi
+	#begin normal script
 	echo -n $"Starting xend daemon: "
 	/usr/sbin/xend
 	RETVAL=$?
