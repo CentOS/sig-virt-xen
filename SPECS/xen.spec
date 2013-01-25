@@ -130,6 +130,9 @@ Requires: xen-runtime = %{version}-%{release}
 # installs xen.
 Requires: kpartx
 Requires: chkconfig
+Requires: module-init-tools
+Requires: gawk
+Requires: grep
 ExclusiveArch: %{ix86} x86_64 ia64
 #ExclusiveArch: %{ix86} x86_64 ia64 noarch
 %if %with_ocaml
