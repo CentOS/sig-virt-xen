@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 5.1%{?dist}.5
+Release: 5.1%{?dist}.6
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -432,6 +432,7 @@ mkdir -p %{buildroot}%{_localstatedir}/lib/xen/xend-db/vnet
 mkdir -p %{buildroot}%{_localstatedir}/lib/xen/xend-db/migrate
 mkdir -p %{buildroot}%{_localstatedir}/lib/xen/images
 mkdir -p %{buildroot}%{_localstatedir}/log/xen/console
+mkdir -p %{buildroot}%{_localstatedir}/run/xenstored
 
 ############ create symlink for x86_64 for compatibility with 3.4 ############
 
@@ -673,7 +674,7 @@ rm -rf %{buildroot}
 # Xenstore persistent state
 %dir %{_localstatedir}/lib/xenstored
 # Xenstore runtime state
-%ghost %{_localstatedir}/run/xenstored
+%dir %{_localstatedir}/run/xenstored
 # XenD runtime state
 %ghost %attr(0700,root,root) %{_localstatedir}/run/xend
 %ghost %attr(0700,root,root) %{_localstatedir}/run/xend/boot
@@ -790,6 +791,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Jan 25 2013 Johnny Hughes <johnny@centos.org> 4.2.1-5.1.el6.centos.6
+- added a create for /var/run/xenstored 
+
 * Thu Jan 24 2013 Johnny Hughes <johnny@centos.org> 4.2.1-5.1.el6.centos.5
 - Rolled in patches 57, 58, 59, 61, and 62 to incorporate XSA-33, XSA-34, XSA-35, XSA-37, and XSA-41
   to fix CVE's 2012-5634, 2012-6075, 2013-0151, 2013-0152, CVE-2013-0154
