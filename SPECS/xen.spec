@@ -41,6 +41,7 @@ Source23: init.xend
 Source30: sysconfig.xenstored
 Source31: sysconfig.xenconsoled
 Source32: sysconfig.blktapctrl
+Source33: sysconfig.xend
 # systemd bits
 Source40: proc-xen.mount
 Source41: var-lib-xenstored.mount
@@ -428,6 +429,9 @@ install -m 644 %{SOURCE49} %{buildroot}/usr/lib/tmpfiles.d/xen.conf
 # config file only used for hotplug, Fedora uses udev instead
 rm -f %{buildroot}/%{_sysconfdir}/sysconfig/xend
 
+#add new sysconfig/xend
+install -m 644 %{SOURCE33} %{buildroot}%{_sysconfdir}/sysconfig/xend
+
 ############ create dirs in /var ############
 
 mkdir -p %{buildroot}%{_localstatedir}/lib/xen/xend-db/domain
@@ -566,6 +570,8 @@ rm -rf %{buildroot}
 %dir %attr(0700,root,root) %{_sysconfdir}/%{name}/auto
 # Autostart of guests
 %config(noreplace) %{_sysconfdir}/sysconfig/xendomains
+# xemd sysconfig file
+%config(noreplace) %{_sysconfdir}/sysconfig/xend
 
 %if %with_systemd
 %{_unitdir}/xend.service
