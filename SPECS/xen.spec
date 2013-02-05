@@ -78,6 +78,8 @@ Patch61: xsa37-4.2.patch
 Patch63: xsa41.patch
 
 Patch100: xen-configure-xend.patch
+Patch101: xsa36-4.2.patch
+Patch102: xsa38.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -260,6 +262,8 @@ manage Xen virtual machines.
 %patch63 -p1
 
 %patch100 -p1
+%patch101 -p1
+%patch102 -p1
 
 %patch1000 -p1
 #%patch1002 -p1
@@ -800,6 +804,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Feb  5 2013 Johnny Hughes <johnny@centos.org> 4.2.1-6.1.el6.centos.6
+- Rolled in patch 101 and 102 to fix CVEs 2013-0153, 2013-0215
+
 * Fri Jan 25 2013 Johnny Hughes <johnny@centos.org> 4.2.1-5.1.el6.centos.6
 - added a create for /var/run/xenstored 
 
