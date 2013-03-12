@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 6.1%{?dist}.6
+Release: 6.1%{?dist}.7
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -85,6 +85,7 @@ Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
 #Patch1002: xen-centos-enable-blktap2.patch
 Patch1003: xen-centos-libxl-with-blktap25.patch
+Patch1004: libxl-tools-tapdisk-orphans.patch
 
 # Integrate libxl with libvirt, prep
 Patch1010: xen-centos-libxl_rename-abs-variables-to-absolute.patch
@@ -279,13 +280,13 @@ cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 popd 
 %patch1001 -p1
 %patch1003 -p1
+%patch1004 -p1
 
 # disabling these for now, revisit once we have libvirt happy
 #%patch1010 -p1
 #%patch1011 -p1
 #%patch1012 -p1
 #%patch1013 -p1
-
 
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
@@ -804,6 +805,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Mar 12 2013 Johnny Hughes <johnny@centos.org> 4.2.1-6.1.el6.centos.7
+- updated patches for XSA-36 (CVE-2013-0153, Patch101) and XSA-38 (CVE-2013-0215, Patch102).
+- rolled in Patch1004 in an effort to fix xl.tapdisk orphaning 
+
 * Tue Feb  5 2013 Johnny Hughes <johnny@centos.org> 4.2.1-6.1.el6.centos.6
 - Rolled in patch 101 and 102 to fix CVEs 2013-0153, 2013-0215
 

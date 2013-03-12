@@ -43,11 +43,11 @@ index 00414c5..4888ac5 100644
 +	cons = *(volatile uint32*)&intf->req_cons;
 +	prod = *(volatile uint32*)&intf->req_prod;
  	xen_mb();
-+	cons = MASK_XENSTORE_IDX(cons);
-+	prod = MASK_XENSTORE_IDX(prod);
  	if (prod == cons)
  		return 0;
 -	if (MASK_XENSTORE_IDX(prod) > MASK_XENSTORE_IDX(cons)) 
++	cons = MASK_XENSTORE_IDX(cons);
++	prod = MASK_XENSTORE_IDX(prod);
 +	if (prod > cons)
  		to_read = prod - cons;
  	else

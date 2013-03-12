@@ -37,6 +37,23 @@ This is XSA-36 / CVE-2013-0153.
 Signed-off-by: Jan Beulich <jbeulich@suse.com>
 Signed-off-by: Boris Ostrovsky <boris.ostrovsky@amd.com>
 
+AMD IOMMU: also spot missing IO-APIC entries in IVRS table
+
+Apart from dealing duplicate conflicting entries, we also have to
+handle firmware omitting IO-APIC entries in IVRS altogether. Not doing
+so has resulted in c/s 26517:601139e2b0db to crash such systems during
+boot (whereas with the change here the IOMMU gets disabled just as is
+being done in the other cases, i.e. unless global tables are being
+used).
+
+Debugging this issue has also pointed out that the debug log output is
+pretty ugly to look at - consolidate the output, and add one extra
+item for the IVHD special entries, so that future issues are easier
+to analyze.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Tested-by: Sander Eikelenboom <linux@eikelenboom.it>
+
 --- a/xen/arch/x86/irq.c
 +++ b/xen/arch/x86/irq.c
 @@ -1942,9 +1942,6 @@ int map_domain_pirq(
@@ -152,6 +169,44 @@ Signed-off-by: Boris Ostrovsky <boris.ostrovsky@amd.com>
  }
  
  static int __init parse_ivhd_block(const struct acpi_ivrs_hardware *ivhd_block)
+@@ -818,6 +869,7 @@ static int __init parse_ivrs_table(struc
+ {
+     const struct acpi_ivrs_header *ivrs_block;
+     unsigned long length;
++    unsigned int apic;
+     int error = 0;
+ 
+     BUG_ON(!table);
+@@ -850,6 +902,29 @@ static int __init parse_ivrs_table(struc
+         length += ivrs_block->length;
+     }
+ 
++    /* Each IO-APIC must have been mentioned in the table. */
++    for ( apic = 0; !error && apic < nr_ioapics; ++apic )
++    {
++        if ( !nr_ioapic_entries[apic] ||
++             ioapic_sbdf[IO_APIC_ID(apic)].pin_setup )
++            continue;
++
++        printk(XENLOG_ERR "IVHD Error: no information for IO-APIC %#x\n",
++               IO_APIC_ID(apic));
++        if ( amd_iommu_perdev_intremap )
++            error = -ENXIO;
++        else
++        {
++            ioapic_sbdf[IO_APIC_ID(apic)].pin_setup = xzalloc_array(
++                unsigned long, BITS_TO_LONGS(nr_ioapic_entries[apic]));
++            if ( !ioapic_sbdf[IO_APIC_ID(apic)].pin_setup )
++            {
++                printk(XENLOG_ERR "IVHD Error: Out of memory\n");
++                error = -ENOMEM;
++            }
++        }
++    }
++
+     return error;
+ }
+ 
 --- a/xen/drivers/passthrough/amd/iommu_init.c
 +++ b/xen/drivers/passthrough/amd/iommu_init.c
 @@ -1126,12 +1126,45 @@ static int __init amd_iommu_setup_device
