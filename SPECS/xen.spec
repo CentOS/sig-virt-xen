@@ -1,7 +1,7 @@
 %{!?python_sitearch: %define python_sitearch %(%{__python} -c "from distutils.sysconfig import get_python_lib; print get_python_lib(1)")}
 # Build ocaml bits unless rpmbuild was run with --without ocaml 
 # or ocamlopt is missing (the xen makefile doesn't build ocaml bits if it isn't there)
-%define with_ocaml  %{?_without_ocaml: 0} %{?!_without_ocaml: 1}
+%define with_ocaml  1
 %define build_ocaml %(test -x %{_bindir}/ocamlopt && echo %{with_ocaml} || echo 0)
 # build an efi boot image (where supported) unless rpmbuild was run with
 # --without efi
@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 6.1%{?dist}.7
+Release: 6.1%{?dist}.8
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -86,6 +86,7 @@ Patch1001: xen-centos-disableWerror-blktap25.patch
 #Patch1002: xen-centos-enable-blktap2.patch
 Patch1003: xen-centos-libxl-with-blktap25.patch
 Patch1004: libxl-tools-tapdisk-orphans.patch
+Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
 
 # Integrate libxl with libvirt, prep
 Patch1010: xen-centos-libxl_rename-abs-variables-to-absolute.patch
@@ -281,6 +282,7 @@ popd
 %patch1001 -p1
 %patch1003 -p1
 %patch1004 -p1
+%patch1005 -p1
 
 # disabling these for now, revisit once we have libvirt happy
 #%patch1010 -p1
@@ -805,6 +807,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Wed Mar 27 2013 Johnny Hughes <johnny@centos.org> 4.2.1-6.1.el6.centos.8
+- build with_ocaml
+- roll in xen-centos-blktap25-ctl-ipc-restart.patch 
+
 * Tue Mar 12 2013 Johnny Hughes <johnny@centos.org> 4.2.1-6.1.el6.centos.7
 - updated patches for XSA-36 (CVE-2013-0153, Patch101) and XSA-38 (CVE-2013-0215, Patch102).
 - rolled in Patch1004 in an effort to fix xl.tapdisk orphaning 
