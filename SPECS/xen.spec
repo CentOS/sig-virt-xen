@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 6.1%{?dist}.8
+Release: 10.1%{?dist}.8
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -80,6 +80,8 @@ Patch63: xsa41.patch
 Patch100: xen-configure-xend.patch
 Patch101: xsa36-4.2.patch
 Patch102: xsa38.patch
+Patch103: gcc48.build.patch
+Patch104: xsa47-4.2-unstable.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -266,6 +268,8 @@ manage Xen virtual machines.
 %patch100 -p1
 %patch101 -p1
 %patch102 -p1
+%patch103 -p1
+%patch104 -p1
 
 %patch1000 -p1
 #%patch1002 -p1
@@ -807,6 +811,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu Apr  5 2013 Johnny Hughes <johnny@centos.org> 4.2.1-10.1.el6.centos.8
+- added patches 103 and 104.  Patch104 is Security fix for XSA-47,CVE-2013-1920  
+
 * Wed Mar 27 2013 Johnny Hughes <johnny@centos.org> 4.2.1-6.1.el6.centos.8
 - build with_ocaml
 - roll in xen-centos-blktap25-ctl-ipc-restart.patch 
