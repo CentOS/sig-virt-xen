@@ -82,6 +82,9 @@ Patch101: xsa36-4.2.patch
 Patch102: xsa38.patch
 Patch103: gcc48.build.patch
 Patch104: xsa47-4.2-unstable.patch
+Patch105: xsa48-4.2.patch
+Patch106: xen-xl-autoballon-with-auto-option.patch
+Patch107: xen-xl-set-autoballon-default-auto.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -270,6 +273,9 @@ manage Xen virtual machines.
 %patch102 -p1
 %patch103 -p1
 %patch104 -p1
+%patch105 -p1
+%patch106 -p1
+%patch107 -p1
 
 %patch1000 -p1
 #%patch1002 -p1
@@ -811,6 +817,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Apr 16 2013 Johnny Hughes <johnny@centos.org> 4.2.1-10.1.el6.centos.9
+- Roll in security fix for XSA-48,CVE-2013-1922 (Patch105)
+- Roll in patch to add auto option for autoballon(Patch106) and 
+  set the autoballon option to auto (Patch107)
+
 * Thu Apr  5 2013 Johnny Hughes <johnny@centos.org> 4.2.1-10.1.el6.centos.8
 - added patches 103 and 104.  Patch104 is Security fix for XSA-47,CVE-2013-1920  
 
