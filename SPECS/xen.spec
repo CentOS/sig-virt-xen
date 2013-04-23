@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.1
-Release: 10.1%{?dist}.8
+Release: 10.1%{?dist}.9
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -85,6 +85,7 @@ Patch104: xsa47-4.2-unstable.patch
 Patch105: xsa48-4.2.patch
 Patch106: xen-xl-autoballon-with-auto-option.patch
 Patch107: xen-xl-set-autoballon-default-auto.patch
+Patch108: xsa44-4.2.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -273,9 +274,9 @@ manage Xen virtual machines.
 %patch102 -p1
 %patch103 -p1
 %patch104 -p1
-%patch105 -p1
 %patch106 -p1
 %patch107 -p1
+%patch108 -p1
 
 %patch1000 -p1
 #%patch1002 -p1
@@ -293,6 +294,11 @@ popd
 %patch1003 -p1
 %patch1004 -p1
 %patch1005 -p1
+
+pushd `pwd`
+cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/qemu-xen
+%patch105 -p1
+popd
 
 # disabling these for now, revisit once we have libvirt happy
 #%patch1010 -p1
@@ -817,10 +823,11 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
-* Tue Apr 16 2013 Johnny Hughes <johnny@centos.org> 4.2.1-10.1.el6.centos.9
+* Tue Apr 23 2013 Johnny Hughes <johnny@centos.org> 4.2.1-10.1.el6.centos.9
 - Roll in security fix for XSA-48,CVE-2013-1922 (Patch105)
 - Roll in patch to add auto option for autoballon(Patch106) and 
   set the autoballon option to auto (Patch107)
+- Roll in security fix for XSA-44,CVE-2013-1917 (Patch108) 
 
 * Thu Apr  5 2013 Johnny Hughes <johnny@centos.org> 4.2.1-10.1.el6.centos.8
 - added patches 103 and 104.  Patch104 is Security fix for XSA-47,CVE-2013-1920  
