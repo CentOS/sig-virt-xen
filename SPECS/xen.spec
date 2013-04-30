@@ -18,7 +18,7 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.2.1
+Version: 4.2.2
 Release: 10.1%{?dist}.9
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
@@ -54,7 +54,7 @@ Source47: xendomains.service
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
 
-Source100: qemu-xen-%{version}.tar.gz
+Source100: qemu-xen-4.2.1.tar.gz
 Source101: blktap-9960138790b9d3610b12acd153bba20235efa4f5.tar.gz
 
 Patch1: xen-initscript.patch
@@ -67,38 +67,24 @@ Patch35: xend-pci-loop.patch
 Patch39: xend.selinux.fixes.patch
 Patch46: xen.use.fedora.seabios.patch
 Patch47: xen.use.fedora.ipxe.patch
-#Patch48: qemu-xen.tradonly.patch
+
 Patch49: xen.fedora.efi.build.patch
 Patch55: qemu-xen.trad.buildfix.patch
 Patch56: xen.fedora19.buildfix.patch
-Patch57: xsa33-4.2-unstable.patch
-Patch58: xsa34-4.2.patch
-Patch59: xsa35-4.2-with-xsa34.patch
-Patch61: xsa37-4.2.patch
-Patch63: xsa41.patch
+
+Patch64: xl.list.-l.format.patch
+Patch65: xen.git-9c23a1d0eb7a6b5e3273d527cfd7960838fbfee6.patch
 
 Patch100: xen-configure-xend.patch
-Patch101: xsa36-4.2.patch
-Patch102: xsa38.patch
-Patch103: gcc48.build.patch
-Patch104: xsa47-4.2-unstable.patch
+
 Patch105: xsa48-4.2.patch
 Patch106: xen-xl-autoballon-with-auto-option.patch
 Patch107: xen-xl-set-autoballon-default-auto.patch
-Patch108: xsa44-4.2.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
-#Patch1002: xen-centos-enable-blktap2.patch
 Patch1003: xen-centos-libxl-with-blktap25.patch
-Patch1004: libxl-tools-tapdisk-orphans.patch
 Patch1005: xen-centos-blktap25-ctl-ipc-restart.patch
-
-# Integrate libxl with libvirt, prep
-Patch1010: xen-centos-libxl_rename-abs-variables-to-absolute.patch
-Patch1011: xen-centos-libxl_Fix-passing-of-application-data-to-timeout_deregister-hook.patch
-Patch1012: xen-centos-libxl_fix-stale-fd-event-callback-race.patch
-Patch1013: xen-centos-libxl_fix-stale-timeout-event-callback-race.patch
 
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root
 BuildRequires: transfig libidn-devel zlib-devel texi2html SDL-devel curl-devel
@@ -259,27 +245,18 @@ manage Xen virtual machines.
 %patch39 -p1
 %patch46 -p1
 %patch47 -p1
-#%patch48 -p1
 %patch49 -p1
 %patch55 -p1
 %patch56 -p1
-%patch57 -p1
-%patch58 -p1
-%patch59 -p1
-%patch61 -p1
-%patch63 -p1
+
+%patch64 -p1
+%patch65 -p1
 
 %patch100 -p1
-%patch101 -p1
-%patch102 -p1
-%patch103 -p1
-%patch104 -p1
 %patch106 -p1
 %patch107 -p1
-%patch108 -p1
 
 %patch1000 -p1
-#%patch1002 -p1
 
 pushd `pwd`
 rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/qemu-xen
@@ -292,19 +269,12 @@ cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 popd 
 %patch1001 -p1
 %patch1003 -p1
-%patch1004 -p1
 %patch1005 -p1
 
 pushd `pwd`
 cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/qemu-xen
 %patch105 -p1
 popd
-
-# disabling these for now, revisit once we have libvirt happy
-#%patch1010 -p1
-#%patch1011 -p1
-#%patch1012 -p1
-#%patch1013 -p1
 
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
@@ -823,6 +793,12 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Apr 30 2013 Johnny Hughes <johnny@centos.org> 4.2.2-10.1.el6.centos.9
+- upgraded to upstream version 4.2.2 for xen
+- removed patches 48,57,58,59,61,63,101,102,103,104,108,1002,1004 as
+  they are already part of xen-4.2.2
+- added patches 64 and 65
+
 * Tue Apr 23 2013 Johnny Hughes <johnny@centos.org> 4.2.1-10.1.el6.centos.9
 - Roll in security fix for XSA-48,CVE-2013-1922 (Patch105)
 - Roll in patch to add auto option for autoballon(Patch106) and 

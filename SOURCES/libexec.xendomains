@@ -190,15 +190,20 @@ rdnames()
     done
 }
 
+LIST_GREP='((domain\|(domid\|(name\|^{$\|"name":\|"domid":'
 parseln()
 {
-    if [[ "$1" =~ '(domain' ]]; then
+    if [[ "$1" =~ '(domain' ]] || [[ "$1" = "{" ]]; then
         name=;id=
-    else if [[ "$1" =~ '(name' ]]; then
+    elif [[ "$1" =~ '(name' ]]; then
         name=$(echo $1 | sed -e 's/^.*(name \(.*\))$/\1/')
-    else if [[ "$1" =~ '(domid' ]]; then
+    elif [[ "$1" =~ '(domid' ]]; then
         id=$(echo $1 | sed -e 's/^.*(domid \(.*\))$/\1/')
-    fi; fi; fi
+    elif [[ "$1" =~ '"name":' ]]; then
+        name=$(echo $1 | sed -e 's/^.*"name": "\(.*\)",$/\1/')
+    elif [[ "$1" =~ '"domid":' ]]; then
+        id=$(echo $1 | sed -e 's/^.*"domid": \(.*\),$/\1/')
+    fi
 
     [ -n "$name" -a -n "$id" ] && return 0 || return 1
 }
@@ -216,7 +221,7 @@ is_running()
 		RC=0
 		;;
 	esac
-    done < <($CMD list -l | grep '(\(domain\|domid\|name\)')
+    done < <($CMD list -l | grep $LIST_GREP)
     return $RC
 }
 
@@ -238,7 +243,7 @@ start()
         for dom in $XENDOMAINS_SAVE/*; do
             if [ -f $dom ] ; then
                 HEADER=`head -c 16 $dom | head -n 1 2> /dev/null`
-                if [ $HEADER = "LinuxGuestRecord" ]; then
+                if [ "$HEADER" = "LinuxGuestRecord" -o "$HEADER" = "Xen saved domain" ]; then
                     echo -n " ${dom##*/}"
                     XMR=`$CMD restore $dom 2>&1 1>/dev/null`
                     #$CMD restore $dom
@@ -298,7 +303,7 @@ all_zombies()
 	if test "$state" != "-b---d" -a "$state" != "-----d"; then
 	    return 1;
 	fi
-    done < <($CMD list -l | grep '(\(domain\|domid\|name\)')
+    done < <($CMD list -l | grep $LIST_GREP)
     return 0
 }
 
@@ -421,7 +426,7 @@ stop()
 	    echo -n "(shut)"
 	    watchdog_xencmd shutdown &
 	    WDOG_PID=$!
-	    XMR=`$CMD shutdown $id $XENDOMAINS_SHUTDOWN 2>&1 1>/dev/null`
+	    XMR=`$CMD shutdown $XENDOMAINS_SHUTDOWN $id 2>&1 1>/dev/null`
 	    if test $? -ne 0; then
 		echo -e "\nAn error occurred while shutting down domain:\n$XMR\n"
 		rc_failed $?
@@ -429,7 +434,7 @@ stop()
 	    fi
 	    kill $WDOG_PID >/dev/null 2>&1
 	fi
-    done < <($CMD list -l | grep '(\(domain\|domid\|name\)')
+    done < <($CMD list -l | grep $LIST_GREP)
 
     # NB. this shuts down ALL Xen domains (politely), not just the ones in
     # AUTODIR/*
@@ -466,7 +471,7 @@ check_domain_up()
 		return 0
 		;;
 	esac
-    done < <($CMD list -l | grep '(\(domain\|domid\|name\)')
+    done < <($CMD list -l | grep $LIST_GREP)
     return 1
 }
 
