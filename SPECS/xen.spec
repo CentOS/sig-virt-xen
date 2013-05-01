@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.2
-Release: 10.1%{?dist}.9
+Release: 11%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -793,11 +793,12 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
-* Tue Apr 30 2013 Johnny Hughes <johnny@centos.org> 4.2.2-10.1.el6.centos.9
+* Tue Apr 30 2013 Johnny Hughes <johnny@centos.org> 4.2.2-11.el6.centos
 - upgraded to upstream version 4.2.2 for xen
 - removed patches 48,57,58,59,61,63,101,102,103,104,108,1002,1004 as
   they are already part of xen-4.2.2
 - added patches 64 and 65
+- upgraded Source100 to upstream qemu-xen-4.2.2 
 
 * Tue Apr 23 2013 Johnny Hughes <johnny@centos.org> 4.2.1-10.1.el6.centos.9
 - Roll in security fix for XSA-48,CVE-2013-1922 (Patch105)
