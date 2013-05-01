@@ -54,7 +54,7 @@ Source47: xendomains.service
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
 
-Source100: qemu-xen-4.2.1.tar.gz
+Source100: qemu-xen-4.2.2.tar.gz
 Source101: blktap-9960138790b9d3610b12acd153bba20235efa4f5.tar.gz
 
 Patch1: xen-initscript.patch
