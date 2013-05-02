@@ -74,6 +74,14 @@ Patch56: xen.fedora19.buildfix.patch
 
 Patch64: xl.list.-l.format.patch
 Patch65: xen.git-9c23a1d0eb7a6b5e3273d527cfd7960838fbfee6.patch
+Patch66: xsa45-4.2-01-vcpu-destroy-pagetables-preemptible.patch
+Patch67: xsa45-4.2-02-new-guest-cr3-preemptible.patch
+Patch68: xsa45-4.2-03-new-user-base-preemptible.patch
+Patch69: xsa45-4.2-04-vcpu-reset-preemptible.patch
+Patch70: xsa45-4.2-05-set-info-guest-preemptible.patch
+Patch71: xsa45-4.2-06-unpin-preemptible.patch
+Patch72: xsa45-4.2-07-mm-error-paths-preemptible.patch
+Patch73: xsa49-4.2.patch
 
 Patch100: xen-configure-xend.patch
 
@@ -251,6 +259,14 @@ manage Xen virtual machines.
 
 %patch64 -p1
 %patch65 -p1
+%patch66 -p1
+%patch67 -p1
+%patch68 -p1
+%patch69 -p1
+%patch70 -p1
+%patch71 -p1
+%patch72 -p1
+%patch73 -p1
 
 %patch100 -p1
 %patch106 -p1
@@ -793,6 +809,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Thu May  2 2013 Johnny Hughes <johnny@centos.org> 4.2.2-12.el6.centos
+- Rolled in patches 66 through 73 for XSA-45 (CVE-2013-1918) and XSA-49 (CVE-2013-1952)
+
 * Tue Apr 30 2013 Johnny Hughes <johnny@centos.org> 4.2.2-11.el6.centos
 - upgraded to upstream version 4.2.2 for xen
 - removed patches 48,57,58,59,61,63,101,102,103,104,108,1002,1004 as
