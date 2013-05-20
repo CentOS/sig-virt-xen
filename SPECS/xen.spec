@@ -82,6 +82,7 @@ Patch70: xsa45-4.2-05-set-info-guest-preemptible.patch
 Patch71: xsa45-4.2-06-unpin-preemptible.patch
 Patch72: xsa45-4.2-07-mm-error-paths-preemptible.patch
 Patch73: xsa49-4.2.patch
+Patch74: xsa56.patch
 
 Patch100: xen-configure-xend.patch
 
@@ -267,6 +268,7 @@ manage Xen virtual machines.
 %patch71 -p1
 %patch72 -p1
 %patch73 -p1
+%patch74 -p1
 
 %patch100 -p1
 %patch106 -p1
@@ -809,6 +811,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon May 20 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-13.el6.centos
+- Rolled in patch 74 for XSA-56 (CVE-2013-2072)
+
 * Thu May  2 2013 Johnny Hughes <johnny@centos.org> 4.2.2-12.el6.centos
 - Rolled in patches 66 through 73 for XSA-45 (CVE-2013-1918) and XSA-49 (CVE-2013-1952)
 
