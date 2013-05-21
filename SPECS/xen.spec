@@ -475,7 +475,7 @@ find . -path licensedir -prune -o -path stubdom/ioemu -prune -o \
 done
 
 %ifarch x86_64
-pushd %{buildroot}/lib64/xen/bin/
+pushd %{buildroot}/usr/lib64/xen/bin/
 for f in libxl-save-helper xc_save xc_restore pygrub
   do
     ln -sf  $f ../../../lib/xen/bin/
