@@ -819,6 +819,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue May 21 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-15.el6.centos
+- ln sf some files from lib64/xen/bin to lib/xen/bin
+
 * Mon May 20 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-14.el6.centos
 - Rolled in patch 74 for XSA-56 (CVE-2013-2072)
 
