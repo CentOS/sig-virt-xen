@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.2
-Release: 15%{?dist}
+Release: 16%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -475,10 +475,10 @@ find . -path licensedir -prune -o -path stubdom/ioemu -prune -o \
 done
 
 %ifarch x86_64
-pushd %{buildroot}/usr/lib64/xen/bin/
+pushd %{buildroot}/usr/lib/xen/bin/
 for f in libxl-save-helper xc_save xc_restore pygrub
   do
-    ln -sf  $f ../../../lib/xen/bin/
+    ln -sf ../../../lib64/xen/bin/$f .
   done
 popd
 %endif
