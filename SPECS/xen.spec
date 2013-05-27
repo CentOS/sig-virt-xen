@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.2
-Release: 16%{?dist}
+Release: 17%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -83,6 +83,7 @@ Patch71: xsa45-4.2-06-unpin-preemptible.patch
 Patch72: xsa45-4.2-07-mm-error-paths-preemptible.patch
 Patch73: xsa49-4.2.patch
 Patch74: xsa56.patch
+PAtch75: xsa46-regression-xend-xm.patch
 
 Patch100: xen-configure-xend.patch
 
@@ -269,6 +270,7 @@ manage Xen virtual machines.
 %patch72 -p1
 %patch73 -p1
 %patch74 -p1
+%patch75 -p1
 
 %patch100 -p1
 %patch106 -p1
@@ -819,6 +821,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon May 27 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-16.el6.centos
+- add patch 75 to fix xsa46 regression
+
 * Tue May 21 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-15.el6.centos
 - ln sf some files from lib64/xen/bin to lib/xen/bin
 
