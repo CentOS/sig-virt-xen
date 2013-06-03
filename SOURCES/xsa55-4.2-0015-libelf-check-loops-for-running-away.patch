@@ -1,0 +1,195 @@
+From e7b3dc915e427c784fbf52f1689c83b518053330 Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Fri, 24 May 2013 17:52:43 +0100
+Subject: [PATCH 15/16] libelf: check loops for running away
+
+Ensure that libelf does not have any loops which can run away
+indefinitely even if the input is bogus.  (Grepped for \bfor, \bwhile
+and \bgoto in libelf and xc_dom_*loader*.c.)
+
+Changes needed:
+ * elf_note_next uses the note's unchecked alleged length, which might
+   wrap round.  If it does, return ELF_MAX_PTRVAL (0xfff..fff) instead,
+   which will be beyond the end of the section and so terminate the
+   caller's loop.
+ * In various loops over section and program headers, check that the
+   calculated header pointer is still within the image, and quit the
+   loop if it isn't.
+
+We have not changed loops which might, in principle, iterate over the
+whole image - even if they might do so one byte at a time with a
+nontrivial access check function in the middle.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+
+v3: Fix a whitespace error.
+
+v2: BUGFIX: elf_shdr_by_name, elf_note_next: Reject new <= old, not just <.
+    elf_shdr_by_name: Change order of checks to be a bit clearer.
+    elf_load_bsdsyms: shdr loop check, improve chance of brokenness detection.
+    Style fixes.
+---
+ tools/libxc/xc_dom_elfloader.c     |    3 +++
+ xen/common/libelf/libelf-dominfo.c |   14 ++++++++++++++
+ xen/common/libelf/libelf-loader.c  |   27 +++++++++++++++++++++++++--
+ xen/common/libelf/libelf-tools.c   |   11 ++++++++++-
+ 4 files changed, 52 insertions(+), 3 deletions(-)
+
+diff --git a/tools/libxc/xc_dom_elfloader.c b/tools/libxc/xc_dom_elfloader.c
+index d9b1a43..9bd3708 100644
+--- a/tools/libxc/xc_dom_elfloader.c
++++ b/tools/libxc/xc_dom_elfloader.c
+@@ -224,6 +224,9 @@ static elf_errorstatus xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+     for ( h = 0; h < count; h++ )
+     {
+         shdr = ELF_OBSOLETE_VOIDP_CAST elf_shdr_by_index(&syms, h);
++        if ( !elf_access_ok(elf, ELF_HANDLE_PTRVAL(shdr), 1) )
++            /* input has an insane section header count field */
++            break;
+         type = elf_uval(&syms, shdr, sh_type);
+         if ( type == SHT_STRTAB )
+         {
+diff --git a/xen/common/libelf/libelf-dominfo.c b/xen/common/libelf/libelf-dominfo.c
+index e837d4d..8189fa5 100644
+--- a/xen/common/libelf/libelf-dominfo.c
++++ b/xen/common/libelf/libelf-dominfo.c
+@@ -485,6 +485,13 @@ elf_errorstatus elf_xen_parse(struct elf_binary *elf,
+     for ( i = 0; i < count; i++ )
+     {
+         phdr = elf_phdr_by_index(elf, i);
++        /*
++         * This test also arranges for the loop to terminate if the
++         * input file has a ridiculous value for the header count: The
++         * first putative header outside the input image will appear
++         * to have type 0 (since out-of-range accesses read as 0) and
++         * PT_NOTE != 0.
++         */
+         if ( elf_uval(elf, phdr, p_type) != PT_NOTE )
+             continue;
+ 
+@@ -515,6 +522,10 @@ elf_errorstatus elf_xen_parse(struct elf_binary *elf,
+         {
+             shdr = elf_shdr_by_index(elf, i);
+ 
++            /*
++             * See above re guarantee of loop termination.
++             * SHT_NOTE != 0.
++             */
+             if ( elf_uval(elf, shdr, sh_type) != SHT_NOTE )
+                 continue;
+ 
+@@ -552,6 +563,9 @@ elf_errorstatus elf_xen_parse(struct elf_binary *elf,
+                 elf_xen_parse_guest_info(elf, parms);
+                 break;
+             }
++            if ( !elf_access_ok(elf, ELF_HANDLE_PTRVAL(shdr), 1) )
++                /* input has an insane section header count field */
++                break;
+         }
+     }
+ 
+diff --git a/xen/common/libelf/libelf-loader.c b/xen/common/libelf/libelf-loader.c
+index c3a9e51..a6c97d0 100644
+--- a/xen/common/libelf/libelf-loader.c
++++ b/xen/common/libelf/libelf-loader.c
+@@ -75,6 +75,9 @@ elf_errorstatus elf_init(struct elf_binary *elf, const char *image_input, size_t
+     for ( i = 0; i < count; i++ )
+     {
+         shdr = elf_shdr_by_index(elf, i);
++        if ( !elf_access_ok(elf, ELF_HANDLE_PTRVAL(shdr), 1) )
++            /* input has an insane section header count field */
++            break;
+         if ( elf_uval(elf, shdr, sh_type) != SHT_SYMTAB )
+             continue;
+         elf->sym_tab = shdr;
+@@ -170,6 +173,9 @@ void elf_parse_bsdsyms(struct elf_binary *elf, uint64_t pstart)
+     for ( i = 0; i < elf_shdr_count(elf); i++ )
+     {
+         shdr = elf_shdr_by_index(elf, i);
++        if ( !elf_access_ok(elf, ELF_HANDLE_PTRVAL(shdr), 1) )
++            /* input has an insane section header count field */
++            break;
+         type = elf_uval(elf, shdr, sh_type);
+         if ( (type == SHT_STRTAB) || (type == SHT_SYMTAB) )
+             sz = elf_round_up(elf, sz + elf_uval(elf, shdr, sh_size));
+@@ -224,6 +230,9 @@ do {                                            \
+ 
+     for ( i = 0; i < elf_shdr_count(elf); i++ )
+     {
++        elf_ptrval old_shdr_p;
++        elf_ptrval new_shdr_p;
++
+         type = elf_uval(elf, shdr, sh_type);
+         if ( (type == SHT_STRTAB) || (type == SHT_SYMTAB) )
+         {
+@@ -235,8 +244,16 @@ do {                                            \
+              elf_hdr_elm(elf, shdr, sh_offset, maxva - symtab_addr);
+              maxva = ELF_OBSOLETE_VOIDP_CAST elf_round_up(elf, (unsigned long)maxva + sz);
+         }
+-        shdr = ELF_MAKE_HANDLE(elf_shdr, ELF_HANDLE_PTRVAL(shdr) +
+-                            (unsigned long)elf_uval(elf, elf->ehdr, e_shentsize));
++        old_shdr_p = ELF_HANDLE_PTRVAL(shdr);
++        new_shdr_p = old_shdr_p + elf_uval(elf, elf->ehdr, e_shentsize);
++        if ( new_shdr_p <= old_shdr_p ) /* wrapped or stuck */
++        {
++            elf_mark_broken(elf, "bad section header length");
++            break;
++        }
++        if ( !elf_access_ok(elf, new_shdr_p, 1) ) /* outside image */
++            break;
++        shdr = ELF_MAKE_HANDLE(elf_shdr, new_shdr_p);
+     }
+ 
+     /* Write down the actual sym size. */
+@@ -256,6 +273,9 @@ void elf_parse_binary(struct elf_binary *elf)
+     for ( i = 0; i < count; i++ )
+     {
+         phdr = elf_phdr_by_index(elf, i);
++        if ( !elf_access_ok(elf, ELF_HANDLE_PTRVAL(phdr), 1) )
++            /* input has an insane program header count field */
++            break;
+         if ( !elf_phdr_is_loadable(elf, phdr) )
+             continue;
+         paddr = elf_uval(elf, phdr, p_paddr);
+@@ -283,6 +303,9 @@ elf_errorstatus elf_load_binary(struct elf_binary *elf)
+     for ( i = 0; i < count; i++ )
+     {
+         phdr = elf_phdr_by_index(elf, i);
++        if ( !elf_access_ok(elf, ELF_HANDLE_PTRVAL(phdr), 1) )
++            /* input has an insane program header count field */
++            break;
+         if ( !elf_phdr_is_loadable(elf, phdr) )
+             continue;
+         paddr = elf_uval(elf, phdr, p_paddr);
+diff --git a/xen/common/libelf/libelf-tools.c b/xen/common/libelf/libelf-tools.c
+index 308ea15..eb89c31 100644
+--- a/xen/common/libelf/libelf-tools.c
++++ b/xen/common/libelf/libelf-tools.c
+@@ -145,6 +145,9 @@ ELF_HANDLE_DECL(elf_shdr) elf_shdr_by_name(struct elf_binary *elf, const char *n
+ 
+     for ( i = 0; i < count; i++ )
+     {
++        if (!elf_access_ok(elf, ELF_HANDLE_PTRVAL(shdr), 1))
++            /* input has an insane section header count field */
++            break;
+         shdr = elf_shdr_by_index(elf, i);
+         sname = elf_section_name(elf, shdr);
+         if ( sname && !strcmp(sname, name) )
+@@ -324,7 +327,13 @@ ELF_HANDLE_DECL(elf_note) elf_note_next(struct elf_binary *elf, ELF_HANDLE_DECL(
+     unsigned namesz = (elf_uval(elf, note, namesz) + 3) & ~3;
+     unsigned descsz = (elf_uval(elf, note, descsz) + 3) & ~3;
+ 
+-    return ELF_MAKE_HANDLE(elf_note, ELF_HANDLE_PTRVAL(note) + elf_size(elf, note) + namesz + descsz);
++    elf_ptrval ptrval = ELF_HANDLE_PTRVAL(note)
++        + elf_size(elf, note) + namesz + descsz;
++
++    if (ptrval <= ELF_HANDLE_PTRVAL(note))
++        ptrval = ELF_MAX_PTRVAL; /* terminate caller's loop */
++
++    return ELF_MAKE_HANDLE(elf_note, ptrval);
+ }
+ 
+ /* ------------------------------------------------------------------------ */
+-- 
+1.7.2.5
+

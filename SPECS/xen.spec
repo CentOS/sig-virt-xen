@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.2
-Release: 17%{?dist}
+Release: 18%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -83,7 +83,26 @@ Patch71: xsa45-4.2-06-unpin-preemptible.patch
 Patch72: xsa45-4.2-07-mm-error-paths-preemptible.patch
 Patch73: xsa49-4.2.patch
 Patch74: xsa56.patch
-PAtch75: xsa46-regression-xend-xm.patch
+Patch75: xsa46-regression-xend-xm.patch
+Patch76: xsa55-4.2-0001-libelf-abolish-libelf-relocate.c.patch
+Patch77: xsa55-4.2-0002-libxc-introduce-xc_dom_seg_to_ptr_pages.patch
+Patch78: xsa55-4.2-0003-libelf-add-struct-elf_binary-parameter-to-elf_load_i.patch
+Patch79: xsa55-4.2-0004-libelf-abolish-elf_sval-and-elf_access_signed.patch
+Patch80: xsa55-4.2-0005-libelf-move-include-of-asm-guest_access.h-to-top-of-.patch
+Patch81: xsa55-4.2-0006-libelf-xc_dom_load_elf_symtab-Do-not-use-syms-uninit.patch
+Patch82: xsa55-4.2-0007-libelf-introduce-macros-for-memory-access-and-pointe.patch
+Patch83: xsa55-4.2-0008-tools-xcutils-readnotes-adjust-print_l1_mfn_valid_no.patch
+Patch84: xsa55-4.2-0009-libelf-check-nul-terminated-strings-properly.patch
+Patch85: xsa55-4.2-0010-libelf-check-all-pointer-accesses.patch
+Patch86: xsa55-4.2-0011-libelf-Check-pointer-references-in-elf_is_elfbinary.patch
+Patch87: xsa55-4.2-0012-libelf-Make-all-callers-call-elf_check_broken.patch
+Patch88: xsa55-4.2-0013-libelf-use-C99-bool-for-booleans.patch
+Patch89: xsa55-4.2-0014-libelf-use-only-unsigned-integers.patch
+Patch90: xsa55-4.2-0015-libelf-check-loops-for-running-away.patch
+Patch91: xsa55-4.2-0016-libelf-abolish-obsolete-macros.patch
+Patch92: xsa52-4.2-unstable.patch
+Patch93: xsa53-4.2.patch
+Patch94: xsa54.patch
 
 Patch100: xen-configure-xend.patch
 
@@ -271,6 +290,25 @@ manage Xen virtual machines.
 %patch73 -p1
 %patch74 -p1
 %patch75 -p1
+%patch76 -p1
+%patch77 -p1
+%patch78 -p1
+%patch79 -p1
+%patch80 -p1
+%patch81 -p1
+%patch82 -p1
+%patch83 -p1
+%patch84 -p1
+%patch85 -p1
+%patch86 -p1
+%patch87 -p1
+%patch88 -p1
+%patch89 -p1
+%patch90 -p1
+%patch91 -p1
+%patch92 -p1
+%patch93 -p1
+%patch94 -p1
 
 %patch100 -p1
 %patch106 -p1
@@ -821,6 +859,12 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Mon Jun  3 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-18.el6.centos
+- added patches 76 to 91 for XSA-55 (No CVE Assigned)
+- added patch 92 for XSA-52 (CVE-2013-2076)
+- added patch 93 for XSA-53 (CVE-2013-2077)
+- added patch 94 for XSA-54 (CVE-2013-2078)
+  
 * Mon May 27 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-16.el6.centos
 - add patch 75 to fix xsa46 regression
 

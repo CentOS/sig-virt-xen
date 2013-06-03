@@ -1,0 +1,50 @@
+From 8d895cda49f5334fc8248d2c802dc890cfbb03f0 Mon Sep 17 00:00:00 2001
+From: Ian Jackson <ian.jackson@eu.citrix.com>
+Date: Fri, 24 May 2013 17:52:41 +0100
+Subject: [PATCH 02/16] libxc: introduce xc_dom_seg_to_ptr_pages
+
+Provide a version of xc_dom_seg_to_ptr which returns the number of
+guest pages it has actually mapped.  This is useful for callers who
+want to do range checking; we will use this later in this series.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+---
+ tools/libxc/xc_dom.h |   12 ++++++++++--
+ 1 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxc/xc_dom.h b/tools/libxc/xc_dom.h
+index 6a72aa9..b74252f 100644
+--- a/tools/libxc/xc_dom.h
++++ b/tools/libxc/xc_dom.h
+@@ -278,16 +278,24 @@ void *xc_dom_pfn_to_ptr(struct xc_dom_image *dom, xen_pfn_t first,
+ void xc_dom_unmap_one(struct xc_dom_image *dom, xen_pfn_t pfn);
+ void xc_dom_unmap_all(struct xc_dom_image *dom);
+ 
+-static inline void *xc_dom_seg_to_ptr(struct xc_dom_image *dom,
+-                                      struct xc_dom_seg *seg)
++static inline void *xc_dom_seg_to_ptr_pages(struct xc_dom_image *dom,
++                                      struct xc_dom_seg *seg,
++                                      xen_pfn_t *pages_out)
+ {
+     xen_vaddr_t segsize = seg->vend - seg->vstart;
+     unsigned int page_size = XC_DOM_PAGE_SIZE(dom);
+     xen_pfn_t pages = (segsize + page_size - 1) / page_size;
++    if (pages_out) *pages_out = pages;
+ 
+     return xc_dom_pfn_to_ptr(dom, seg->pfn, pages);
+ }
+ 
++static inline void *xc_dom_seg_to_ptr(struct xc_dom_image *dom,
++                                      struct xc_dom_seg *seg)
++{
++    return xc_dom_seg_to_ptr_pages(dom, seg, NULL);
++}
++
+ static inline void *xc_dom_vaddr_to_ptr(struct xc_dom_image *dom,
+                                         xen_vaddr_t vaddr)
+ {
+-- 
+1.7.2.5
+
