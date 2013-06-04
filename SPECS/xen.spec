@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.2
-Release: 18%{?dist}
+Release: 19%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -323,7 +323,7 @@ rm -rf ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 %{__tar} -C ${RPM_BUILD_DIR}/%{name}-%{version}/tools/ -zxf %{SOURCE101} 
 cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/blktap2
 ./autogen.sh
-./configure --libdir=%{_libdir} --prefix=/user --libexecdir=/usr/lib/xen/bin
+XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir} --prefix=/user --libexecdir=/usr/lib/xen/bin
 popd 
 %patch1001 -p1
 %patch1003 -p1
@@ -348,12 +348,12 @@ mkdir -p dist/install/boot/efi/efi/fedora
 %endif
 export XEN_VENDORVERSION="-%{release}"
 export CFLAGS="$RPM_OPT_FLAGS"
-make %{?_smp_mflags} %{?efi_flags} prefix=/usr dist-xen
-./configure --libdir=%{_libdir}
-make %{?_smp_mflags} %{?ocaml_flags} prefix=/usr dist-tools
-make                 prefix=/usr dist-docs
+XEN_VENDORVERSION="-%{release}" make %{?_smp_mflags} %{?efi_flags} prefix=/usr dist-xen
+XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir}
+XEN_VENDORVERSION="-%{release}" make %{?_smp_mflags} %{?ocaml_flags} prefix=/usr dist-tools
+XEN_VENDORVERSION="-%{release}" make                 prefix=/usr dist-docs
 unset CFLAGS
-make %{?ocaml_flags} dist-stubdom
+XEN_VENDORVERSION="-%{release}" make %{?ocaml_flags} dist-stubdom
 
 
 %install
@@ -859,6 +859,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Jun  4 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-19.el6.centos
+- tried to work around an empty XEN_VENDORVERSION in the spec file
+
 * Mon Jun  3 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-18.el6.centos
 - added patches 76 to 91 for XSA-55 (No CVE Assigned)
 - added patch 92 for XSA-52 (CVE-2013-2076)
