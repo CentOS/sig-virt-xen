@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.2
-Release: 20%{?dist}
+Release: 21%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -290,22 +290,22 @@ manage Xen virtual machines.
 %patch73 -p1
 %patch74 -p1
 %patch75 -p1
-%patch76 -p1
-%patch77 -p1
-%patch78 -p1
-%patch79 -p1
-%patch80 -p1
-%patch81 -p1
-%patch82 -p1
-%patch83 -p1
-%patch84 -p1
-%patch85 -p1
-%patch86 -p1
-%patch87 -p1
-%patch88 -p1
-%patch89 -p1
-%patch90 -p1
-%patch91 -p1
+#%patch76 -p1
+#%patch77 -p1
+#%patch78 -p1
+#%patch79 -p1
+#%patch80 -p1
+#%patch81 -p1
+#%patch82 -p1
+#%patch83 -p1
+#%patch84 -p1
+#%patch85 -p1
+#%patch86 -p1
+#%patch87 -p1
+#%patch88 -p1
+#%patch89 -p1
+#%patch90 -p1
+#%patch91 -p1
 %patch92 -p1
 %patch93 -p1
 %patch94 -p1
@@ -346,7 +346,7 @@ cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
 %define efi_flags LD_EFI=/usr/x86_64-w64-mingw32/bin/ld
 mkdir -p dist/install/boot/efi/efi/fedora
 %endif
-export XEN_VENDORVERSION="-%{release}"
+export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
 export CFLAGS="$RPM_OPT_FLAGS"
 make %{?_smp_mflags} %{?efi_flags} prefix=/usr dist-xen
@@ -365,7 +365,7 @@ mkdir -p %{buildroot}%{_libdir}/ocaml/stublibs
 %if %build_efi
 mkdir -p %{buildroot}/boot/efi/efi/fedora
 %endif
-export XEN_VENDORVERSION="-%{release}"
+export XEN_VENDORVERSION="-$(echo %{release} | sed 's/.centos.alt//g')"
 export XEN_DOMAIN="centos.org"
 make DESTDIR=%{buildroot} %{?efi_flags}  prefix=/usr install-xen
 make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-tools
@@ -862,6 +862,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Jun  5 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-21.el6.centos
+- remarked out XSA-55 patches while they are being better tested upstream 
+- cleaned up XEN_VENDORVERSION to remove .centos.alt
+
 * Tue Jun  5 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-20.el6.centos
 - added XEN_VENDORVERSION to the make install section of the spec
 - added XEN_DOMAIN=centos.org make and make install sections of the spec
