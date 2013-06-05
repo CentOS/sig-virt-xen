@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.2
-Release: 19%{?dist}
+Release: 20%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -347,13 +347,14 @@ cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
 mkdir -p dist/install/boot/efi/efi/fedora
 %endif
 export XEN_VENDORVERSION="-%{release}"
+export XEN_DOMAIN="centos.org"
 export CFLAGS="$RPM_OPT_FLAGS"
-XEN_VENDORVERSION="-%{release}" make %{?_smp_mflags} %{?efi_flags} prefix=/usr dist-xen
-XEN_VENDORVERSION="-%{release}" ./configure --libdir=%{_libdir}
-XEN_VENDORVERSION="-%{release}" make %{?_smp_mflags} %{?ocaml_flags} prefix=/usr dist-tools
-XEN_VENDORVERSION="-%{release}" make                 prefix=/usr dist-docs
+make %{?_smp_mflags} %{?efi_flags} prefix=/usr dist-xen
+./configure --libdir=%{_libdir}
+make %{?_smp_mflags} %{?ocaml_flags} prefix=/usr dist-tools
+make                 prefix=/usr dist-docs
 unset CFLAGS
-XEN_VENDORVERSION="-%{release}" make %{?ocaml_flags} dist-stubdom
+make %{?ocaml_flags} dist-stubdom
 
 
 %install
@@ -364,6 +365,8 @@ mkdir -p %{buildroot}%{_libdir}/ocaml/stublibs
 %if %build_efi
 mkdir -p %{buildroot}/boot/efi/efi/fedora
 %endif
+export XEN_VENDORVERSION="-%{release}"
+export XEN_DOMAIN="centos.org"
 make DESTDIR=%{buildroot} %{?efi_flags}  prefix=/usr install-xen
 make DESTDIR=%{buildroot} %{?ocaml_flags} prefix=/usr install-tools
 make DESTDIR=%{buildroot} prefix=/usr install-docs
@@ -859,6 +862,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Tue Jun  5 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-20.el6.centos
+- added XEN_VENDORVERSION to the make install section of the spec
+- added XEN_DOMAIN=centos.org make and make install sections of the spec
+
 * Tue Jun  4 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-19.el6.centos
 - tried to work around an empty XEN_VENDORVERSION in the spec file
 
