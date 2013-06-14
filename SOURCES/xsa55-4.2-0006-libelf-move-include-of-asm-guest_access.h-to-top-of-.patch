@@ -1,7 +1,7 @@
-From c2a7f97c7100532aac72de2e242ae97dde3737a0 Mon Sep 17 00:00:00 2001
+From 682a04488e7b3bd6c3448ab60599566eb7c6177a Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:41 +0100
-Subject: [PATCH 05/16] libelf: move include of <asm/guest_access.h> to top of file
+Date: Fri, 14 Jun 2013 16:43:16 +0100
+Subject: [PATCH 06/23] libelf: move include of <asm/guest_access.h> to top of file
 
 libelf-loader.c #includes <asm/guest_access.h>, when being compiled
 for Xen.  Currently it does this in the middle of the file.
@@ -12,6 +12,8 @@ private #defines of memcpy etc. which would interfere with definitions
 in headers #included from guest_access.h.
 
 No semantic or functional change in this patch.
+
+This is part of the fix to a security issue, XSA-55.
 
 Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
 Acked-by: Ian Campbell <ian.campbell@citrix.com>

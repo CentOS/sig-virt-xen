@@ -1,7 +1,7 @@
-From 87c02b2160cbaf81c37b904d2e651bcdff149939 Mon Sep 17 00:00:00 2001
+From a965b8f80388603d439ae2b8ee7b9b018a079f90 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:42 +0100
-Subject: [PATCH 12/16] libelf: Make all callers call elf_check_broken
+Date: Fri, 14 Jun 2013 16:43:17 +0100
+Subject: [PATCH 13/23] libelf: Make all callers call elf_check_broken
 
 This arranges that if the new pointer reference error checking
 tripped, we actually get a message about it.  In this patch these
@@ -15,16 +15,17 @@ In xen/arch/x86/domain_build.c we have to introduce an "out" label and
 change all of the "return rc" beyond the relevant point into "goto
 out".
 
+Difference in the 4.2 series, compared to unstable:
+
+* tools/libxc/xc_hvm_build_x86.c:setup_guest and
+  xen/arch/arm/kernel.c:kernel_try_elf_prepare have different
+  error handling in 4.2 to unstable; patch adjusted accordingly.
+
+This is part of the fix to a security issue, XSA-55.
+
 Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
 
-v3.1:
-    Add error check to xc_dom_parse_elf_kernel.
-    Move check in xc_hvm_build_x86.c:setup_guest to right place.
-
-v2 Acked-by: Ian Campbell <ian.campbell@citrix.com>
-v2 Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-
-v2: Style fixes.
+xen-unstable version Reviewed-by: George Dunlap <george.dunlap@eu.citrix.com>
 ---
  tools/libxc/xc_dom_elfloader.c |   25 +++++++++++++++++++++----
  tools/libxc/xc_hvm_build_x86.c |    5 +++++
@@ -34,10 +35,10 @@ v2: Style fixes.
  5 files changed, 64 insertions(+), 12 deletions(-)
 
 diff --git a/tools/libxc/xc_dom_elfloader.c b/tools/libxc/xc_dom_elfloader.c
-index 92211bd..c7958ec 100644
+index ea45886..4fb4da2 100644
 --- a/tools/libxc/xc_dom_elfloader.c
 +++ b/tools/libxc/xc_dom_elfloader.c
-@@ -277,6 +277,13 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -276,6 +276,13 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
              elf_store_field(elf, shdr, e32.sh_name, 0);
      }
  
@@ -51,7 +52,7 @@ index 92211bd..c7958ec 100644
      if ( tables == 0 )
      {
          DOMPRINTF("%s: no symbol table present", __FUNCTION__);
-@@ -313,19 +320,23 @@ static int xc_dom_parse_elf_kernel(struct xc_dom_image *dom)
+@@ -312,19 +319,23 @@ static int xc_dom_parse_elf_kernel(struct xc_dom_image *dom)
      {
          xc_dom_panic(dom->xch, XC_INVALID_KERNEL, "%s: ELF image"
                       " has no shstrtab", __FUNCTION__);
@@ -78,7 +79,7 @@ index 92211bd..c7958ec 100644
      }
  
      /* find kernel segment */
-@@ -339,7 +350,13 @@ static int xc_dom_parse_elf_kernel(struct xc_dom_image *dom)
+@@ -338,7 +349,13 @@ static int xc_dom_parse_elf_kernel(struct xc_dom_image *dom)
      DOMPRINTF("%s: %s: 0x%" PRIx64 " -> 0x%" PRIx64 "",
                __FUNCTION__, dom->guest_type,
                dom->kernel_seg.vstart, dom->kernel_seg.vend);
@@ -88,7 +89,7 @@ index 92211bd..c7958ec 100644
 +    if ( elf_check_broken(elf) )
 +        DOMPRINTF("%s: ELF broken: %s", __FUNCTION__,
 +                  elf_check_broken(elf));
-+    
++
 +    return rc;
  }
  
@@ -115,14 +116,14 @@ index ccfd8b5..8165287 100644
  }
  
 diff --git a/tools/xcutils/readnotes.c b/tools/xcutils/readnotes.c
-index ca86ba5..b868fba 100644
+index cfae994..d1f7a30 100644
 --- a/tools/xcutils/readnotes.c
 +++ b/tools/xcutils/readnotes.c
-@@ -300,6 +300,9 @@ int main(int argc, char **argv)
+@@ -301,6 +301,9 @@ int main(int argc, char **argv)
  		printf("__xen_guest: %s\n",
                         elf_strfmt(&elf, elf_section_start(&elf, shdr)));
  
-+        if (elf_check_broken(&elf))
++	if (elf_check_broken(&elf))
 +		printf("warning: broken ELF: %s\n", elf_check_broken(&elf));
 +
  	return 0;

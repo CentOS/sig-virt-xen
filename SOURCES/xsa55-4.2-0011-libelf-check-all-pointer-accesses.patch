@@ -1,7 +1,7 @@
-From bc14f1dd3f22d609a52edbe9b053180446e0068b Mon Sep 17 00:00:00 2001
+From cc8761371aac432318530c2ddfe2c8234bc0621f Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:42 +0100
-Subject: [PATCH 10/16] libelf: check all pointer accesses
+Date: Fri, 14 Jun 2013 16:43:17 +0100
+Subject: [PATCH 11/23] libelf: check all pointer accesses
 
 We change the ELF_PTRVAL and ELF_HANDLE types and associated macros:
 
@@ -80,75 +80,40 @@ We change the ELF_PTRVAL and ELF_HANDLE types and associated macros:
    every supported architecture.  But it does check the supplied
    pointer for validity.
 
-Additional changes in 4.2 backport:
-
-* ELF_PRPTRVAL needs to be defined oddly on 4.2 and earlier because
-  while Xen's headers provide a definition of PRIuPTR, it doesn't
-  match the type of uintptr_t so it causes compilation errors.
-
-* To support 32-bit builds, ELF_UNSAFE_PTR contains an explicit cast
-  to uintptr_t in case the argument isn't the same size.  On 32-bit
-  some of the values converted to pointers are 64-bit.
+This is part of the fix to a security issue, XSA-55.
 
 Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
-
-v3.1:
-    Introduce a change to elf_store_field to undo the effects of
-     the v3.1 change to the previous patch (the definition there
-     is not compatible with the new types).
-
-v3: Fix a whitespace error.
-
-v2 Acked-by: Ian Campbell <ian.campbell@citrix.com>
-
-v2: BUGFIX: elf_strval: Fix loop termination condition to actually work.
-    BUGFIX: elf_strval: Fix return value to not always be totally wild.
-    BUGFIX: xc_dom_load_elf_symtab: do proper check for small header size.
-    xc_dom_load_elf_symtab: narrow scope of `hdr_ptr'.
-    xc_dom_load_elf_symtab: split out uninit'd symtab.class ref fix.
-    More comments on the lifetime/validity of elf-> dest ptrs etc.
-    libelf.h: write "obsolete" out in full
-    libelf.h: rename "dontuse" to "typeonly" and add doc comment
-    elf_ptrval_in_range: Document trustedness of arguments.
-    Style and commit message fixes.
 ---
- tools/libxc/xc_dom_elfloader.c     |   49 ++++++++-
+ tools/libxc/xc_dom_elfloader.c     |   49 ++++++++--
  tools/libxc/xc_hvm_build_x86.c     |   10 +-
  xen/arch/x86/domain_build.c        |    3 +-
  xen/common/libelf/libelf-dominfo.c |    2 +-
  xen/common/libelf/libelf-loader.c  |   16 ++--
  xen/common/libelf/libelf-private.h |   13 +++
- xen/common/libelf/libelf-tools.c   |  103 ++++++++++++++++++-
- xen/include/xen/libelf.h           |  194 +++++++++++++++++++++++++-----------
- 8 files changed, 305 insertions(+), 85 deletions(-)
+ xen/common/libelf/libelf-tools.c   |  106 ++++++++++++++++++-
+ xen/include/xen/libelf.h           |  198 +++++++++++++++++++++++++-----------
+ 8 files changed, 312 insertions(+), 85 deletions(-)
 
 diff --git a/tools/libxc/xc_dom_elfloader.c b/tools/libxc/xc_dom_elfloader.c
-index e481649..80152bf 100644
+index cc0f206..b82a08c 100644
 --- a/tools/libxc/xc_dom_elfloader.c
 +++ b/tools/libxc/xc_dom_elfloader.c
-@@ -120,6 +120,7 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
-     ELF_PTRVAL_CHAR hdr;
-     size_t size;
-     int h, count, type, i, tables = 0;
-+    unsigned int page_size = XC_DOM_PAGE_SIZE(dom);
- 
-     if ( elf_swap(elf) )
-     {
-@@ -130,19 +131,30 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -130,20 +130,30 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
  
      if ( load )
      {
+-        size_t allow_size; /* will be used in a forthcoming XSA-55 patch */
 +        char *hdr_ptr;
++        size_t allow_size;
 +
          if ( !dom->bsd_symtab_start )
              return 0;
          size = dom->kernel_seg.vend - dom->bsd_symtab_start;
--        hdr  = xc_dom_vaddr_to_ptr(dom, dom->bsd_symtab_start);
+-        hdr  = xc_dom_vaddr_to_ptr(dom, dom->bsd_symtab_start, &allow_size);
 -        *(int *)hdr = size - sizeof(int);
-+        hdr_ptr  = xc_dom_vaddr_to_ptr(dom, dom->bsd_symtab_start);
++        hdr_ptr = xc_dom_vaddr_to_ptr(dom, dom->bsd_symtab_start, &allow_size);
 +        elf->caller_xdest_base = hdr_ptr;
-+        elf->caller_xdest_size = page_size -
-+            (dom->bsd_symtab_start & (page_size-1));
++        elf->caller_xdest_size = allow_size;
 +        hdr = ELF_REALPTR2PTRVAL(hdr_ptr);
 +        elf_store_val(elf, int, hdr, size - sizeof(int));
      }
@@ -169,7 +134,7 @@ index e481649..80152bf 100644
          dom->bsd_symtab_start = elf_round_up(elf, dom->kernel_seg.vend);
      }
  
-@@ -170,9 +182,32 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -171,9 +181,32 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
          ehdr->e_shoff = elf_size(elf, elf->ehdr);
          ehdr->e_shstrndx = SHN_UNDEF;
      }
@@ -203,7 +168,7 @@ index e481649..80152bf 100644
      xc_elf_set_logfile(dom->xch, &syms, 1);
  
      symtab = dom->bsd_symtab_start + sizeof(int);
-@@ -311,8 +346,10 @@ static int xc_dom_load_elf_kernel(struct xc_dom_image *dom)
+@@ -312,8 +345,10 @@ static int xc_dom_load_elf_kernel(struct xc_dom_image *dom)
  {
      struct elf_binary *elf = dom->private_loader;
      int rc;
@@ -343,10 +308,10 @@ index 3ef753c..280dfd1 100644
  
  /*
 diff --git a/xen/common/libelf/libelf-tools.c b/xen/common/libelf/libelf-tools.c
-index 3a0cde1..ed107bc 100644
+index 3a0cde1..46ca553 100644
 --- a/xen/common/libelf/libelf-tools.c
 +++ b/xen/common/libelf/libelf-tools.c
-@@ -20,28 +20,97 @@
+@@ -20,28 +20,100 @@
  
  /* ------------------------------------------------------------------------ */
  
@@ -370,12 +335,15 @@ index 3a0cde1..ed107bc 100644
 +     * is completely inside the region [region,region+regionsize>.
 +     *
 +     * ptrval and size are the untrusted inputs to be checked.
-+     * region and regionsize are trusted and must be correct and valid.
++     * region and regionsize are trusted and must be correct and valid,
++     * although it is OK for region to perhaps be maliciously NULL
++     * (but not some other malicious value).
 +     */
 +{
 +    elf_ptrval regionp = (elf_ptrval)region;
 +
-+    if ( (ptrval < regionp) ||              /* start is before region */
++    if ( (region == NULL) ||
++         (ptrval < regionp) ||              /* start is before region */
 +         (ptrval > regionp + regionsize) || /* start is after region */
 +         (size > regionsize - (ptrval - regionp)) ) /* too big */
 +        return 0;
@@ -450,7 +418,7 @@ index 3a0cde1..ed107bc 100644
          return need_swap ? bswap_64(*u64) : *u64;
      default:
          return 0;
-@@ -122,6 +191,28 @@ const char *elf_section_name(struct elf_binary *elf,
+@@ -122,6 +194,28 @@ const char *elf_section_name(struct elf_binary *elf,
      return elf_strval(elf, elf->sec_strtab + elf_uval(elf, shdr, sh_name));
  }
  
@@ -480,7 +448,7 @@ index 3a0cde1..ed107bc 100644
  {
      return ELF_IMAGE_BASE(elf) + elf_uval(elf, shdr, sh_offset);
 diff --git a/xen/include/xen/libelf.h b/xen/include/xen/libelf.h
-index 8049cdc..bbde92e 100644
+index af5b5c5..ddc3ed7 100644
 --- a/xen/include/xen/libelf.h
 +++ b/xen/include/xen/libelf.h
 @@ -57,8 +57,9 @@ typedef void elf_log_callback(struct elf_binary*, void *caller_data,
@@ -527,19 +495,19 @@ index 8049cdc..bbde92e 100644
 +#define ELF_PTRVAL_CHAR              elf_ptrval /*obsolete*/
 +#define ELF_PTRVAL_CONST_VOID        elf_ptrval /*obsolete*/
 +#define ELF_PTRVAL_CONST_CHAR        elf_ptrval /*obsolete*/
- 
--#define ELF_DEFINE_HANDLE(structname) /* empty */
-+/* printf format a la PRId... for a PTRVAL */
++
 +#ifdef __XEN__
-+#define ELF_PRPTRVAL "lu"
++# define ELF_PRPTRVAL "lu"
 +  /*
-+   * PRIuPTR is misdefined in xen/include/xen/inttypes.h,
-+   * on x86_32, to "u", when in fact uintptr_t is an unsigned long.
++   * PRIuPTR is misdefined in xen/include/xen/inttypes.h, on 32-bit,
++   * to "u", when in fact uintptr_t is an unsigned long.
 +   */
 +#else
-+#define ELF_PRPTRVAL PRIuPTR
++# define ELF_PRPTRVAL PRIuPTR
 +#endif
-+
++  /* printf format a la PRId... for a PTRVAL */
+ 
+-#define ELF_DEFINE_HANDLE(structname) /* empty */
 +#define ELF_DEFINE_HANDLE(structname)                                   \
 +    typedef union {                                                     \
 +        elf_ptrval ptrval;                                              \
@@ -579,12 +547,12 @@ index 8049cdc..bbde92e 100644
 +   * and no need for any casting.
     */
  
--#define ELF_UNSAFE_PTR(ptrval) ((void*)(ptrval))
-+#define ELF_UNSAFE_PTR(ptrval) ((void*)(uintptr_t)(ptrval))
+-#define ELF_UNSAFE_PTR(ptrval) ((void*)(uintptr_t)(ptrval))
++#define ELF_UNSAFE_PTR(ptrval) ((void*)(elf_ptrval)(ptrval))
    /*
     * Turns a PTRVAL into an actual C pointer.  Before this is done
     * the caller must have ensured that the PTRVAL does in fact point
-@@ -122,23 +135,25 @@ typedef void elf_log_callback(struct elf_binary*, void *caller_data,
+@@ -122,18 +135,21 @@ typedef void elf_log_callback(struct elf_binary*, void *caller_data,
     */
  
  /* PTRVALs can be INVALID (ie, NULL). */
@@ -612,12 +580,7 @@ index 8049cdc..bbde92e 100644
  
  
  /* ------------------------------------------------------------------------ */
- 
--
- typedef union {
-     Elf32_Ehdr e32;
-     Elf64_Ehdr e64;
-@@ -182,7 +197,7 @@ ELF_DEFINE_HANDLE(elf_note)
+@@ -182,7 +198,7 @@ ELF_DEFINE_HANDLE(elf_note)
  
  struct elf_binary {
      /* elf binary */
@@ -626,7 +589,7 @@ index 8049cdc..bbde92e 100644
      size_t size;
      char class;
      char data;
-@@ -190,10 +205,16 @@ struct elf_binary {
+@@ -190,10 +206,16 @@ struct elf_binary {
      ELF_HANDLE_DECL(elf_ehdr) ehdr;
      ELF_PTRVAL_CONST_CHAR sec_strtab;
      ELF_HANDLE_DECL(elf_shdr) sym_tab;
@@ -645,7 +608,7 @@ index 8049cdc..bbde92e 100644
      uint64_t pstart;
      uint64_t pend;
      uint64_t reloc_offset;
-@@ -201,12 +222,22 @@ struct elf_binary {
+@@ -201,12 +223,22 @@ struct elf_binary {
      uint64_t bsd_symtab_pstart;
      uint64_t bsd_symtab_pend;
  
@@ -668,7 +631,7 @@ index 8049cdc..bbde92e 100644
  };
  
  /* ------------------------------------------------------------------------ */
-@@ -224,22 +255,27 @@ struct elf_binary {
+@@ -224,22 +256,27 @@ struct elf_binary {
  #define elf_lsb(elf)   (ELFDATA2LSB == (elf)->data)
  #define elf_swap(elf)  (NATIVE_ELFDATA != (elf)->data)
  
@@ -706,7 +669,7 @@ index 8049cdc..bbde92e 100644
    /*
     * Returns the size of the substructure for the appropriate 32/64-bitness.
     * str should be a HANDLE.
-@@ -251,23 +287,37 @@ uint64_t elf_access_unsigned(struct elf_binary *elf, ELF_PTRVAL_CONST_VOID ptr,
+@@ -251,23 +288,37 @@ uint64_t elf_access_unsigned(struct elf_binary *elf, ELF_PTRVAL_CONST_VOID ptr,
  
  uint64_t elf_round_up(struct elf_binary *elf, uint64_t addr);
  
@@ -754,7 +717,7 @@ index 8049cdc..bbde92e 100644
                     (val)))
    /* Stores a 32/64-bit field.  hdr is a HANDLE and elm is the field name. */
  
-@@ -306,6 +356,10 @@ int elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr)
+@@ -306,6 +357,10 @@ int elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr)
  /* xc_libelf_loader.c                                                       */
  
  int elf_init(struct elf_binary *elf, const char *image, size_t size);
@@ -765,7 +728,7 @@ index 8049cdc..bbde92e 100644
  #ifdef __XEN__
  void elf_set_verbose(struct elf_binary *elf);
  #else
-@@ -321,6 +375,9 @@ uint64_t elf_lookup_addr(struct elf_binary *elf, const char *symbol);
+@@ -321,6 +376,9 @@ uint64_t elf_lookup_addr(struct elf_binary *elf, const char *symbol);
  
  void elf_parse_bsdsyms(struct elf_binary *elf, uint64_t pstart); /* private */
  
@@ -775,7 +738,7 @@ index 8049cdc..bbde92e 100644
  /* ------------------------------------------------------------------------ */
  /* xc_libelf_relocate.c                                                     */
  
-@@ -395,16 +452,33 @@ int elf_xen_parse_guest_info(struct elf_binary *elf,
+@@ -395,16 +453,38 @@ int elf_xen_parse_guest_info(struct elf_binary *elf,
  int elf_xen_parse(struct elf_binary *elf,
                    struct elf_dom_parms *parms);
  
@@ -802,7 +765,11 @@ index 8049cdc..bbde92e 100644
 +/* Advances past amount bytes of the current destination area. */
 +static inline void ELF_ADVANCE_DEST(struct elf_binary *elf, uint64_t amount)
 +{
-+    if ( elf->dest_size >= amount )
++    if ( elf->dest_base == NULL )
++    {
++        elf_mark_broken(elf, "advancing in null image");
++    }
++    else if ( elf->dest_size >= amount )
 +    {
 +        elf->dest_base += amount;
 +        elf->dest_size -= amount;
@@ -810,6 +777,7 @@ index 8049cdc..bbde92e 100644
 +    else
 +    {
 +        elf->dest_size = 0;
++        elf_mark_broken(elf, "advancing past end (image very short?)");
 +    }
 +}
  

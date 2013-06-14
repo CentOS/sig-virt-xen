@@ -84,31 +84,36 @@ Patch72: xsa45-4.2-07-mm-error-paths-preemptible.patch
 Patch73: xsa49-4.2.patch
 Patch74: xsa56.patch
 Patch75: xsa46-regression-xend-xm.patch
-Patch76: xsa55-4.2-0001-libelf-abolish-libelf-relocate.c.patch
-Patch77: xsa55-4.2-0002-libxc-introduce-xc_dom_seg_to_ptr_pages.patch
-Patch78: xsa55-4.2-0003-libelf-add-struct-elf_binary-parameter-to-elf_load_i.patch
-Patch79: xsa55-4.2-0004-libelf-abolish-elf_sval-and-elf_access_signed.patch
-Patch80: xsa55-4.2-0005-libelf-move-include-of-asm-guest_access.h-to-top-of-.patch
-Patch81: xsa55-4.2-0006-libelf-xc_dom_load_elf_symtab-Do-not-use-syms-uninit.patch
-Patch82: xsa55-4.2-0007-libelf-introduce-macros-for-memory-access-and-pointe.patch
-Patch83: xsa55-4.2-0008-tools-xcutils-readnotes-adjust-print_l1_mfn_valid_no.patch
-Patch84: xsa55-4.2-0009-libelf-check-nul-terminated-strings-properly.patch
-Patch85: xsa55-4.2-0010-libelf-check-all-pointer-accesses.patch
-Patch86: xsa55-4.2-0011-libelf-Check-pointer-references-in-elf_is_elfbinary.patch
-Patch87: xsa55-4.2-0012-libelf-Make-all-callers-call-elf_check_broken.patch
-Patch88: xsa55-4.2-0013-libelf-use-C99-bool-for-booleans.patch
-Patch89: xsa55-4.2-0014-libelf-use-only-unsigned-integers.patch
-Patch90: xsa55-4.2-0015-libelf-check-loops-for-running-away.patch
-Patch91: xsa55-4.2-0016-libelf-abolish-obsolete-macros.patch
 Patch92: xsa52-4.2-unstable.patch
 Patch93: xsa53-4.2.patch
 Patch94: xsa54.patch
-
 Patch100: xen-configure-xend.patch
-
 Patch105: xsa48-4.2.patch
 Patch106: xen-xl-autoballon-with-auto-option.patch
 Patch107: xen-xl-set-autoballon-default-auto.patch
+Patch108: xsa55-4.2-0001-libelf-abolish-libelf-relocate.c.patch
+Patch109: xsa55-4.2-0002-libxc-introduce-xc_dom_seg_to_ptr_pages.patch
+Patch110: xsa55-4.2-0003-libxc-Fix-range-checking-in-xc_dom_pfn_to_ptr-etc.patch
+Patch111: xsa55-4.2-0004-libelf-add-struct-elf_binary-parameter-to-elf_load_i.patch
+Patch112: xsa55-4.2-0005-libelf-abolish-elf_sval-and-elf_access_signed.patch
+Patch113: xsa55-4.2-0006-libelf-move-include-of-asm-guest_access.h-to-top-of-.patch
+Patch114: xsa55-4.2-0007-libelf-xc_dom_load_elf_symtab-Do-not-use-syms-uninit.patch
+Patch115: xsa55-4.2-0008-libelf-introduce-macros-for-memory-access-and-pointe.patch
+Patch116: xsa55-4.2-0009-tools-xcutils-readnotes-adjust-print_l1_mfn_valid_no.patch
+Patch117: xsa55-4.2-0010-libelf-check-nul-terminated-strings-properly.patch
+Patch118: xsa55-4.2-0011-libelf-check-all-pointer-accesses.patch
+Patch119: xsa55-4.2-0012-libelf-Check-pointer-references-in-elf_is_elfbinary.patch
+Patch120: xsa55-4.2-0013-libelf-Make-all-callers-call-elf_check_broken.patch
+Patch121: xsa55-4.2-0014-libelf-use-C99-bool-for-booleans.patch
+Patch122: xsa55-4.2-0015-libelf-use-only-unsigned-integers.patch
+Patch123: xsa55-4.2-0016-libelf-check-loops-for-running-away.patch
+Patch124: xsa55-4.2-0017-libelf-abolish-obsolete-macros.patch
+Patch125: xsa55-4.2-0018-libxc-Add-range-checking-to-xc_dom_binloader.patch
+Patch126: xsa55-4.2-0019-libxc-check-failure-of-xc_dom_-_to_ptr-xc_map_foreig.patch
+Patch127: xsa55-4.2-0020-libxc-check-return-values-from-malloc.patch
+Patch128: xsa55-4.2-0021-libxc-range-checks-in-xc_dom_p2m_host-and-_guest.patch
+Patch129: xsa55-4.2-0022-libxc-check-blob-size-before-proceeding-in-xc_dom_ch.patch
+Patch130: xsa55-4.2-0023-libxc-Better-range-check-in-xc_dom_alloc_segment.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -290,29 +295,35 @@ manage Xen virtual machines.
 %patch73 -p1
 %patch74 -p1
 %patch75 -p1
-#%patch76 -p1
-#%patch77 -p1
-#%patch78 -p1
-#%patch79 -p1
-#%patch80 -p1
-#%patch81 -p1
-#%patch82 -p1
-#%patch83 -p1
-#%patch84 -p1
-#%patch85 -p1
-#%patch86 -p1
-#%patch87 -p1
-#%patch88 -p1
-#%patch89 -p1
-#%patch90 -p1
-#%patch91 -p1
 %patch92 -p1
 %patch93 -p1
 %patch94 -p1
-
 %patch100 -p1
 %patch106 -p1
 %patch107 -p1
+%patch108 -p1
+%patch109 -p1
+%patch110 -p1
+%patch111 -p1
+%patch112 -p1
+%patch113 -p1
+%patch114 -p1
+%patch115 -p1
+%patch116 -p1
+%patch117 -p1
+%patch118 -p1
+%patch119 -p1
+%patch120 -p1
+%patch121 -p1
+%patch122 -p1
+%patch123 -p1
+%patch124 -p1
+%patch125 -p1
+%patch126 -p1
+%patch127 -p1
+%patch128 -p1
+%patch129 -p1
+%patch130 -p1
 
 %patch1000 -p1
 
@@ -862,6 +873,9 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Fri Jun 14 2013 Johnny Hughes <johnny@cetnos.org> - 4.2.2-22.el6.centos
+- rolled in patches 108 through 130 for XSA-55
+
 * Tue Jun  5 2013 Johnny Hughes <johnny@centos.org> - 4.2.2-21.el6.centos
 - remarked out XSA-55 patches while they are being better tested upstream 
 - cleaned up XEN_VENDORVERSION to remove .centos.alt

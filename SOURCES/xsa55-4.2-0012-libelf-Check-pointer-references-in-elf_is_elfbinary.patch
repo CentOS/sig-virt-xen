@@ -1,27 +1,31 @@
-From eb40af0a209a3778fe39737bb44fdc2b6d3c6b92 Mon Sep 17 00:00:00 2001
+From d0790bdad7496e720416b2d4a04563c4c27e7b95 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:42 +0100
-Subject: [PATCH 11/16] libelf: Check pointer references in elf_is_elfbinary
+Date: Fri, 14 Jun 2013 16:43:17 +0100
+Subject: [PATCH 12/23] libelf: Check pointer references in elf_is_elfbinary
 
 elf_is_elfbinary didn't take a length parameter and could potentially
 access out of range when provided with a very short image.
 
+We only need to check the size is enough for the actual dereference in
+elf_is_elfbinary; callers are just using it to check the magic number
+and do their own checks (usually via the new elf_ptrval system) before
+dereferencing other parts of the header.
+
+This is part of the fix to a security issue, XSA-55.
+
 Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
 Acked-by: Ian Campbell <ian.campbell@citrix.com>
 Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-
-v2: Style fix.
-    Fix commit message subject.
 ---
  tools/libxc/xc_dom_elfloader.c    |    2 +-
  xen/arch/x86/bzimage.c            |    4 ++--
  xen/common/libelf/libelf-loader.c |    2 +-
  xen/common/libelf/libelf-tools.c  |    9 ++++++---
- xen/include/xen/libelf.h          |    2 +-
- 5 files changed, 11 insertions(+), 8 deletions(-)
+ xen/include/xen/libelf.h          |    4 +++-
+ 5 files changed, 13 insertions(+), 8 deletions(-)
 
 diff --git a/tools/libxc/xc_dom_elfloader.c b/tools/libxc/xc_dom_elfloader.c
-index 80152bf..92211bd 100644
+index b82a08c..ea45886 100644
 --- a/tools/libxc/xc_dom_elfloader.c
 +++ b/tools/libxc/xc_dom_elfloader.c
 @@ -95,7 +95,7 @@ static int check_elf_kernel(struct xc_dom_image *dom, int verbose)
@@ -69,10 +73,10 @@ index a3310e7..f8be635 100644
          elf_err(elf, "%s: not an ELF binary\n", __FUNCTION__);
          return -1;
 diff --git a/xen/common/libelf/libelf-tools.c b/xen/common/libelf/libelf-tools.c
-index ed107bc..9c13377 100644
+index 46ca553..744027e 100644
 --- a/xen/common/libelf/libelf-tools.c
 +++ b/xen/common/libelf/libelf-tools.c
-@@ -329,11 +329,14 @@ ELF_HANDLE_DECL(elf_note) elf_note_next(struct elf_binary *elf, ELF_HANDLE_DECL(
+@@ -332,11 +332,14 @@ ELF_HANDLE_DECL(elf_note) elf_note_next(struct elf_binary *elf, ELF_HANDLE_DECL(
  
  /* ------------------------------------------------------------------------ */
  
@@ -91,15 +95,17 @@ index ed107bc..9c13377 100644
  
  int elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr)
 diff --git a/xen/include/xen/libelf.h b/xen/include/xen/libelf.h
-index bbde92e..12d77f9 100644
+index ddc3ed7..ac93858 100644
 --- a/xen/include/xen/libelf.h
 +++ b/xen/include/xen/libelf.h
-@@ -349,7 +349,7 @@ uint64_t elf_note_numeric_array(struct elf_binary *, ELF_HANDLE_DECL(elf_note),
+@@ -350,7 +350,9 @@ uint64_t elf_note_numeric_array(struct elf_binary *, ELF_HANDLE_DECL(elf_note),
                                  unsigned int unitsz, unsigned int idx);
  ELF_HANDLE_DECL(elf_note) elf_note_next(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note);
  
 -int elf_is_elfbinary(const void *image);
++/* (Only) checks that the image has the right magic number. */
 +int elf_is_elfbinary(const void *image_start, size_t image_size);
++
  int elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr);
  
  /* ------------------------------------------------------------------------ */

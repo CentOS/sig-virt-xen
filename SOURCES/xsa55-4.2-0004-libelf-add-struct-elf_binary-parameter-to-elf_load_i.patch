@@ -1,12 +1,14 @@
-From a9cd2c35b3575f18de2bd86f7d5c18d418b05f38 Mon Sep 17 00:00:00 2001
+From 035634047d10c678cbb8801c4263747bdaf4e5b1 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:41 +0100
-Subject: [PATCH 03/16] libelf: add `struct elf_binary*' parameter to elf_load_image
+Date: Fri, 14 Jun 2013 16:43:16 +0100
+Subject: [PATCH 04/23] libelf: add `struct elf_binary*' parameter to elf_load_image
 
 The meat of this function is going to need a copy of the elf pointer,
 in forthcoming patches.
 
 No functional change in this patch.
+
+This is part of the fix to a security issue, XSA-55.
 
 Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
 Acked-by: Ian Campbell <ian.campbell@citrix.com>

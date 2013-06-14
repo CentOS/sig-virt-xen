@@ -1,7 +1,7 @@
-From 01ca8af5fdd11099bf2aebc68c528808729de56f Mon Sep 17 00:00:00 2001
+From db14d5bd9b6508adfcd2b910f454fae12fa4ba00 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:42 +0100
-Subject: [PATCH 09/16] libelf: check nul-terminated strings properly
+Date: Fri, 14 Jun 2013 16:43:17 +0100
+Subject: [PATCH 10/23] libelf: check nul-terminated strings properly
 
 It is not safe to simply take pointers into the ELF and use them as C
 pointers.  They might not be properly nul-terminated (and the pointers
@@ -29,20 +29,20 @@ In future patches, when elf_strval is made able return NULL, when it
 does so it will mark the elf "broken" so that an appropriate
 diagnostic can be printed.
 
+This is part of the fix to a security issue, XSA-55.
+
 Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
 Acked-by: Ian Campbell <ian.campbell@citrix.com>
 Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-
-v2: Fix coding style, in one "if" statement.
 ---
- tools/xcutils/readnotes.c          |   10 +++++++---
+ tools/xcutils/readnotes.c          |   11 ++++++++---
  xen/common/libelf/libelf-dominfo.c |   13 ++++++++++---
  xen/common/libelf/libelf-tools.c   |   10 +++++++---
  xen/include/xen/libelf.h           |    7 +++++--
- 4 files changed, 29 insertions(+), 11 deletions(-)
+ 4 files changed, 30 insertions(+), 11 deletions(-)
 
 diff --git a/tools/xcutils/readnotes.c b/tools/xcutils/readnotes.c
-index 7ff2530..ca86ba5 100644
+index 7ff2530..cfae994 100644
 --- a/tools/xcutils/readnotes.c
 +++ b/tools/xcutils/readnotes.c
 @@ -63,7 +63,7 @@ struct setup_header {
@@ -54,7 +54,7 @@ index 7ff2530..ca86ba5 100644
  }
  
  static void print_numeric_note(const char *prefix, struct elf_binary *elf,
-@@ -103,10 +103,13 @@ static int print_notes(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) start,
+@@ -103,10 +103,14 @@ static int print_notes(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) start,
  {
  	ELF_HANDLE_DECL(elf_note) note;
  	int notes_found = 0;
@@ -64,12 +64,13 @@ index 7ff2530..ca86ba5 100644
  	{
 -		if (0 != strcmp(elf_note_name(elf, note), "Xen"))
 +		this_note_name = elf_note_name(elf, note);
-+		if (NULL == this_note_name ||
-+		    0 != strcmp(this_note_name, "Xen"))
++		if (NULL == this_note_name)
++			continue;
++		if (0 != strcmp(this_note_name, "Xen"))
  			continue;
  
  		notes_found++;
-@@ -294,7 +297,8 @@ int main(int argc, char **argv)
+@@ -294,7 +298,8 @@ int main(int argc, char **argv)
  
  	shdr = elf_shdr_by_name(&elf, "__xen_guest");
  	if (ELF_HANDLE_VALID(shdr))
@@ -167,7 +168,7 @@ index f1fd886..3a0cde1 100644
  
  ELF_PTRVAL_CONST_VOID elf_note_desc(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note)
 diff --git a/xen/include/xen/libelf.h b/xen/include/xen/libelf.h
-index bdfe323..8049cdc 100644
+index cefd3d3..af5b5c5 100644
 --- a/xen/include/xen/libelf.h
 +++ b/xen/include/xen/libelf.h
 @@ -252,6 +252,9 @@ uint64_t elf_access_unsigned(struct elf_binary *elf, ELF_PTRVAL_CONST_VOID ptr,

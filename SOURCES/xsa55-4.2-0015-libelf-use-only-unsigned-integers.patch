@@ -1,7 +1,7 @@
-From 2238fd744ab359dc82e6299629fdf442a197bee3 Mon Sep 17 00:00:00 2001
+From e673ca50127b6c1263727aa31de0b8bb966ca7a2 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:43 +0100
-Subject: [PATCH 14/16] libelf: use only unsigned integers
+Date: Fri, 14 Jun 2013 16:43:18 +0100
+Subject: [PATCH 15/23] libelf: use only unsigned integers
 
 Signed integers have undesirable undefined behaviours on overflow.
 Malicious compilers can turn apparently-correct code into code with
@@ -28,6 +28,8 @@ changed from -1 to ~0U.
 
 grepping shows only one occurrence of "PRId" or "%d" or "%ld" in
 libelf and xc_dom_elfloader.c (a "%d" which becomes "%u").
+
+This is part of the fix to a security issue, XSA-55.
 
 For those concerned about unintentional functional changes, the
 following rune produces a version of the patch which is much smaller
@@ -57,27 +59,17 @@ this patch, and unsigned-differ is this shell script:
     exit $rc
 
 Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
-
-v3: Changes to booleans split off into separate patch.
-
-v2: BUGFIX: Eliminate conversion to int of return from elf_xen_parse_notes.
-    BUGFIX: Fix the one printf format thing which needs changing.
-    Remove irrelevant change to constify note_desc.name in libelf-dominfo.c.
-    In xc_dom_load_elf_symtab change one sizeof(int) to sizeof(unsigned).
-    Do not change type of 2nd argument to memset.
-    Provide seddery for easier review.
-    Style fix.
 ---
  tools/libxc/Makefile               |    9 +++++-
  tools/libxc/xc_dom.h               |    7 +++--
  tools/libxc/xc_dom_elfloader.c     |   42 ++++++++++++++++-------------
- tools/xcutils/readnotes.c          |   15 ++++++-----
+ tools/xcutils/readnotes.c          |   15 +++++-----
  xen/common/libelf/Makefile         |    2 +
- xen/common/libelf/libelf-dominfo.c |   50 ++++++++++++++++++------------------
+ xen/common/libelf/libelf-dominfo.c |   52 ++++++++++++++++++-----------------
  xen/common/libelf/libelf-loader.c  |   20 +++++++-------
  xen/common/libelf/libelf-tools.c   |   24 ++++++++--------
  xen/include/xen/libelf.h           |   21 ++++++++------
- 9 files changed, 103 insertions(+), 87 deletions(-)
+ 9 files changed, 105 insertions(+), 87 deletions(-)
 
 diff --git a/tools/libxc/Makefile b/tools/libxc/Makefile
 index d8c6a60..a3fd90c 100644
@@ -100,7 +92,7 @@ index d8c6a60..a3fd90c 100644
  # new domain builder
  GUEST_SRCS-y                 += xc_dom_core.c xc_dom_boot.c
 diff --git a/tools/libxc/xc_dom.h b/tools/libxc/xc_dom.h
-index b74252f..eb02c25 100644
+index 9f8037e..0161459 100644
 --- a/tools/libxc/xc_dom.h
 +++ b/tools/libxc/xc_dom.h
 @@ -140,9 +140,10 @@ struct xc_dom_image {
@@ -118,7 +110,7 @@ index b74252f..eb02c25 100644
      struct xc_dom_loader *next;
  };
 diff --git a/tools/libxc/xc_dom_elfloader.c b/tools/libxc/xc_dom_elfloader.c
-index 3738250..d9b1a43 100644
+index 9ba64ae..62a0d3b 100644
 --- a/tools/libxc/xc_dom_elfloader.c
 +++ b/tools/libxc/xc_dom_elfloader.c
 @@ -84,7 +84,7 @@ static char *xc_dom_guest_type(struct xc_dom_image *dom,
@@ -151,12 +143,12 @@ index 3738250..d9b1a43 100644
      size_t size;
 -    int h, count, type, i, tables = 0;
 +    unsigned h, count, type, i, tables = 0;
-     unsigned int page_size = XC_DOM_PAGE_SIZE(dom);
  
      if ( elf_swap(elf) )
-@@ -141,13 +141,13 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
-         elf->caller_xdest_size = page_size -
-             (dom->bsd_symtab_start & (page_size-1));
+     {
+@@ -140,13 +140,13 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+         elf->caller_xdest_base = hdr_ptr;
+         elf->caller_xdest_size = allow_size;
          hdr = ELF_REALPTR2PTRVAL(hdr_ptr);
 -        elf_store_val(elf, int, hdr, size - sizeof(int));
 +        elf_store_val(elf, unsigned, hdr, size - sizeof(unsigned));
@@ -170,7 +162,7 @@ index 3738250..d9b1a43 100644
              elf_shdr_count(elf) * elf_size(elf, shdr);
          hdr_ptr = xc_dom_malloc(dom, size);
          if ( hdr_ptr == NULL )
-@@ -158,15 +158,15 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -157,15 +157,15 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
          dom->bsd_symtab_start = elf_round_up(elf, dom->kernel_seg.vend);
      }
  
@@ -189,7 +181,7 @@ index 3738250..d9b1a43 100644
          ehdr->e_phoff = 0;
          ehdr->e_phentsize = 0;
          ehdr->e_phnum = 0;
-@@ -175,22 +175,22 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -174,22 +174,22 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
      }
      else
      {
@@ -216,7 +208,7 @@ index 3738250..d9b1a43 100644
          return -1;
  
      /*
-@@ -210,7 +210,7 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -209,7 +209,7 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
  
      xc_elf_set_logfile(dom->xch, &syms, 1);
  
@@ -225,7 +217,7 @@ index 3738250..d9b1a43 100644
      maxaddr = elf_round_up(&syms, symtab + elf_size(&syms, syms.ehdr) +
                             elf_shdr_count(&syms) * elf_size(&syms, shdr));
  
-@@ -256,7 +256,7 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -255,7 +255,7 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
              size = elf_uval(&syms, shdr, sh_size);
              maxaddr = elf_round_up(&syms, maxaddr + size);
              tables++;
@@ -234,7 +226,7 @@ index 3738250..d9b1a43 100644
                        __FUNCTION__, h,
                        type == SHT_SYMTAB ? "symtab" : "strtab",
                        size, maxaddr);
-@@ -295,10 +295,14 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -294,10 +294,14 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
      return 0;
  }
  
@@ -242,7 +234,7 @@ index 3738250..d9b1a43 100644
 +static elf_errorstatus xc_dom_parse_elf_kernel(struct xc_dom_image *dom)
 +    /*
 +     * This function sometimes returns -1 for error and sometimes
-+     * an errno value.  WTF?
++     * an errno value.  ?!?!
 +     */
  {
      struct elf_binary *elf;
@@ -251,7 +243,7 @@ index 3738250..d9b1a43 100644
  
      rc = check_elf_kernel(dom, 1);
      if ( rc != 0 )
-@@ -359,10 +363,10 @@ out:
+@@ -358,10 +362,10 @@ out:
      return rc;
  }
  
@@ -265,7 +257,7 @@ index 3738250..d9b1a43 100644
  
      elf->dest_base = xc_dom_seg_to_ptr_pages(dom, &dom->kernel_seg, &pages);
 diff --git a/tools/xcutils/readnotes.c b/tools/xcutils/readnotes.c
-index b868fba..9be1594 100644
+index d1f7a30..2ca7732 100644
 --- a/tools/xcutils/readnotes.c
 +++ b/tools/xcutils/readnotes.c
 @@ -70,7 +70,7 @@ static void print_numeric_note(const char *prefix, struct elf_binary *elf,
@@ -299,7 +291,7 @@ index b868fba..9be1594 100644
  	const char *this_note_name;
  
  	for ( note = start; ELF_HANDLE_PTRVAL(note) < ELF_HANDLE_PTRVAL(end); note = elf_note_next(elf, note) )
-@@ -160,7 +160,7 @@ static int print_notes(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) start,
+@@ -161,7 +161,7 @@ static int print_notes(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) start,
  			break;
  		default:
  			printf("unknown note type %#x\n",
@@ -308,7 +300,7 @@ index b868fba..9be1594 100644
  			break;
  		}
  	}
-@@ -170,12 +170,13 @@ static int print_notes(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) start,
+@@ -171,12 +171,13 @@ static int print_notes(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) start,
  int main(int argc, char **argv)
  {
  	const char *f;
@@ -338,7 +330,7 @@ index 18dc8e2..5bf8f76 100644
  	$(OBJCOPY) $(foreach s,$(SECTIONS),--rename-section .$(s)=.init.$(s)) $< $@
  
 diff --git a/xen/common/libelf/libelf-dominfo.c b/xen/common/libelf/libelf-dominfo.c
-index 12b6c2a..e837d4d 100644
+index 12b6c2a..cdd0d31 100644
 --- a/xen/common/libelf/libelf-dominfo.c
 +++ b/xen/common/libelf/libelf-dominfo.c
 @@ -29,15 +29,15 @@ static const char *const elf_xen_feature_names[] = {
@@ -379,11 +371,13 @@ index 12b6c2a..e837d4d 100644
  
      if ( (type >= sizeof(note_desc) / sizeof(note_desc[0])) ||
           (note_desc[type].name == NULL) )
-@@ -216,12 +216,12 @@ int elf_xen_parse_note(struct elf_binary *elf,
+@@ -216,12 +216,14 @@ int elf_xen_parse_note(struct elf_binary *elf,
      return 0;
  }
  
 -static int elf_xen_parse_notes(struct elf_binary *elf,
++#define ELF_NOTE_INVALID (~0U)
++
 +static unsigned elf_xen_parse_notes(struct elf_binary *elf,
                                 struct elf_dom_parms *parms,
                                 ELF_PTRVAL_CONST_VOID start,
@@ -394,16 +388,16 @@ index 12b6c2a..e837d4d 100644
      ELF_HANDLE_DECL(elf_note) note;
      const char *note_name;
  
-@@ -237,7 +237,7 @@ static int elf_xen_parse_notes(struct elf_binary *elf,
+@@ -237,7 +239,7 @@ static int elf_xen_parse_notes(struct elf_binary *elf,
          if ( strcmp(note_name, "Xen") )
              continue;
          if ( elf_xen_parse_note(elf, parms, note) )
 -            return -1;
-+            return ~0U;
++            return ELF_NOTE_INVALID;
          xen_elfnotes++;
      }
      return xen_elfnotes;
-@@ -246,12 +246,12 @@ static int elf_xen_parse_notes(struct elf_binary *elf,
+@@ -246,12 +248,12 @@ static int elf_xen_parse_notes(struct elf_binary *elf,
  /* ------------------------------------------------------------------------ */
  /* __xen_guest section                                                      */
  
@@ -419,7 +413,7 @@ index 12b6c2a..e837d4d 100644
  
      h = parms->guest_info;
  #define STAR(h) (elf_access_unsigned(elf, (h), 0, 1))
-@@ -334,13 +334,13 @@ int elf_xen_parse_guest_info(struct elf_binary *elf,
+@@ -334,13 +336,13 @@ int elf_xen_parse_guest_info(struct elf_binary *elf,
  /* ------------------------------------------------------------------------ */
  /* sanity checks                                                            */
  
@@ -435,7 +429,7 @@ index 12b6c2a..e837d4d 100644
          if ( (machine == EM_386) || (machine == EM_X86_64) )
          {
              elf_err(elf, "%s: ERROR: Not a Xen-ELF image: "
-@@ -378,7 +378,7 @@ static int elf_xen_note_check(struct elf_binary *elf,
+@@ -378,7 +380,7 @@ static int elf_xen_note_check(struct elf_binary *elf,
      return 0;
  }
  
@@ -444,7 +438,7 @@ index 12b6c2a..e837d4d 100644
                                     struct elf_dom_parms *parms)
  {
      if ( (parms->elf_paddr_offset != UNSET_ADDR) &&
-@@ -464,13 +464,13 @@ static int elf_xen_addr_calc_check(struct elf_binary *elf,
+@@ -464,13 +466,13 @@ static int elf_xen_addr_calc_check(struct elf_binary *elf,
  /* ------------------------------------------------------------------------ */
  /* glue it all together ...                                                 */
  
@@ -461,7 +455,7 @@ index 12b6c2a..e837d4d 100644
  
      elf_memset_unchecked(parms, 0, sizeof(*parms));
      parms->virt_base = UNSET_ADDR;
-@@ -495,13 +495,13 @@ int elf_xen_parse(struct elf_binary *elf,
+@@ -495,13 +497,13 @@ int elf_xen_parse(struct elf_binary *elf,
          if (elf_uval(elf, phdr, p_offset) == 0)
               continue;
  
@@ -470,7 +464,7 @@ index 12b6c2a..e837d4d 100644
                                   elf_segment_start(elf, phdr),
                                   elf_segment_end(elf, phdr));
 -        if ( rc == -1 )
-+        if ( more_notes == ~0U )
++        if ( more_notes == ELF_NOTE_INVALID )
              return -1;
  
 -        xen_elfnotes += rc;
@@ -478,7 +472,7 @@ index 12b6c2a..e837d4d 100644
      }
  
      /*
-@@ -518,17 +518,17 @@ int elf_xen_parse(struct elf_binary *elf,
+@@ -518,17 +520,17 @@ int elf_xen_parse(struct elf_binary *elf,
              if ( elf_uval(elf, shdr, sh_type) != SHT_NOTE )
                  continue;
  
@@ -488,7 +482,7 @@ index 12b6c2a..e837d4d 100644
                                       elf_section_end(elf, shdr));
  
 -            if ( rc == -1 )
-+            if ( more_notes == ~0U )
++            if ( more_notes == ELF_NOTE_INVALID )
                  return -1;
  
 -            if ( xen_elfnotes == 0 && rc > 0 )
@@ -584,15 +578,15 @@ index 0dccd4d..c3a9e51 100644
      ELF_HANDLE_DECL(elf_phdr) phdr;
      uint64_t i, count, paddr, offset, filesz, memsz;
 diff --git a/xen/common/libelf/libelf-tools.c b/xen/common/libelf/libelf-tools.c
-index ac6438f..308ea15 100644
+index fa58f76..46d4ab1 100644
 --- a/xen/common/libelf/libelf-tools.c
 +++ b/xen/common/libelf/libelf-tools.c
-@@ -119,19 +119,19 @@ uint64_t elf_access_unsigned(struct elf_binary * elf, elf_ptrval base,
+@@ -122,19 +122,19 @@ uint64_t elf_access_unsigned(struct elf_binary * elf, elf_ptrval base,
  
  uint64_t elf_round_up(struct elf_binary *elf, uint64_t addr)
  {
 -    int elf_round = (elf_64bit(elf) ? 8 : 4) - 1;
-+    unsigned elf_round = (elf_64bit(elf) ? 8 : 4) - 1;
++    uint64_t elf_round = (elf_64bit(elf) ? 8 : 4) - 1;
  
      return (addr + elf_round) & ~elf_round;
  }
@@ -610,7 +604,7 @@ index ac6438f..308ea15 100644
  {
      return elf_uval(elf, elf->ehdr, e_phnum);
  }
-@@ -141,7 +141,7 @@ ELF_HANDLE_DECL(elf_shdr) elf_shdr_by_name(struct elf_binary *elf, const char *n
+@@ -144,7 +144,7 @@ ELF_HANDLE_DECL(elf_shdr) elf_shdr_by_name(struct elf_binary *elf, const char *n
      uint64_t count = elf_shdr_count(elf);
      ELF_HANDLE_DECL(elf_shdr) shdr;
      const char *sname;
@@ -619,7 +613,7 @@ index ac6438f..308ea15 100644
  
      for ( i = 0; i < count; i++ )
      {
-@@ -153,7 +153,7 @@ ELF_HANDLE_DECL(elf_shdr) elf_shdr_by_name(struct elf_binary *elf, const char *n
+@@ -156,7 +156,7 @@ ELF_HANDLE_DECL(elf_shdr) elf_shdr_by_name(struct elf_binary *elf, const char *n
      return ELF_INVALID_HANDLE(elf_shdr);
  }
  
@@ -628,7 +622,7 @@ index ac6438f..308ea15 100644
  {
      uint64_t count = elf_shdr_count(elf);
      ELF_PTRVAL_CONST_VOID ptr;
-@@ -167,7 +167,7 @@ ELF_HANDLE_DECL(elf_shdr) elf_shdr_by_index(struct elf_binary *elf, int index)
+@@ -170,7 +170,7 @@ ELF_HANDLE_DECL(elf_shdr) elf_shdr_by_index(struct elf_binary *elf, int index)
      return ELF_MAKE_HANDLE(elf_shdr, ptr);
  }
  
@@ -637,7 +631,7 @@ index ac6438f..308ea15 100644
  {
      uint64_t count = elf_uval(elf, elf->ehdr, e_phnum);
      ELF_PTRVAL_CONST_VOID ptr;
-@@ -261,7 +261,7 @@ ELF_HANDLE_DECL(elf_sym) elf_sym_by_name(struct elf_binary *elf, const char *sym
+@@ -264,7 +264,7 @@ ELF_HANDLE_DECL(elf_sym) elf_sym_by_name(struct elf_binary *elf, const char *sym
      return ELF_INVALID_HANDLE(elf_sym);
  }
  
@@ -646,7 +640,7 @@ index ac6438f..308ea15 100644
  {
      ELF_PTRVAL_CONST_VOID ptr = elf_section_start(elf, elf->sym_tab);
      ELF_HANDLE_DECL(elf_sym) sym;
-@@ -277,7 +277,7 @@ const char *elf_note_name(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note
+@@ -280,7 +280,7 @@ const char *elf_note_name(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note
  
  ELF_PTRVAL_CONST_VOID elf_note_desc(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note)
  {
@@ -655,7 +649,7 @@ index ac6438f..308ea15 100644
  
      return ELF_HANDLE_PTRVAL(note) + elf_size(elf, note) + namesz;
  }
-@@ -285,7 +285,7 @@ ELF_PTRVAL_CONST_VOID elf_note_desc(struct elf_binary *elf, ELF_HANDLE_DECL(elf_
+@@ -288,7 +288,7 @@ ELF_PTRVAL_CONST_VOID elf_note_desc(struct elf_binary *elf, ELF_HANDLE_DECL(elf_
  uint64_t elf_note_numeric(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note)
  {
      ELF_PTRVAL_CONST_VOID desc = elf_note_desc(elf, note);
@@ -664,7 +658,7 @@ index ac6438f..308ea15 100644
  
      switch (descsz)
      {
-@@ -303,7 +303,7 @@ uint64_t elf_note_numeric_array(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note
+@@ -306,7 +306,7 @@ uint64_t elf_note_numeric_array(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note
                                  unsigned int unitsz, unsigned int idx)
  {
      ELF_PTRVAL_CONST_VOID desc = elf_note_desc(elf, note);
@@ -673,7 +667,7 @@ index ac6438f..308ea15 100644
  
      if ( descsz % unitsz || idx >= descsz / unitsz )
          return 0;
-@@ -321,8 +321,8 @@ uint64_t elf_note_numeric_array(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note
+@@ -324,8 +324,8 @@ uint64_t elf_note_numeric_array(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note
  
  ELF_HANDLE_DECL(elf_note) elf_note_next(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note)
  {
@@ -685,7 +679,7 @@ index ac6438f..308ea15 100644
      return ELF_MAKE_HANDLE(elf_note, ELF_HANDLE_PTRVAL(note) + elf_size(elf, note) + namesz + descsz);
  }
 diff --git a/xen/include/xen/libelf.h b/xen/include/xen/libelf.h
-index 22febea..4fc2496 100644
+index 951430f..87e126a 100644
 --- a/xen/include/xen/libelf.h
 +++ b/xen/include/xen/libelf.h
 @@ -31,6 +31,9 @@
@@ -698,7 +692,7 @@ index 22febea..4fc2496 100644
  #undef ELFSIZE
  #include "elfstructs.h"
  #ifdef __XEN__
-@@ -327,12 +330,12 @@ bool elf_access_ok(struct elf_binary * elf,
+@@ -328,12 +331,12 @@ bool elf_access_ok(struct elf_binary * elf,
  /* ------------------------------------------------------------------------ */
  /* xc_libelf_tools.c                                                        */
  
@@ -715,7 +709,7 @@ index 22febea..4fc2496 100644
  
  const char *elf_section_name(struct elf_binary *elf, ELF_HANDLE_DECL(elf_shdr) shdr); /* might return NULL if inputs are invalid */
  ELF_PTRVAL_CONST_VOID elf_section_start(struct elf_binary *elf, ELF_HANDLE_DECL(elf_shdr) shdr);
-@@ -342,7 +345,7 @@ ELF_PTRVAL_CONST_VOID elf_segment_start(struct elf_binary *elf, ELF_HANDLE_DECL(
+@@ -343,7 +346,7 @@ ELF_PTRVAL_CONST_VOID elf_segment_start(struct elf_binary *elf, ELF_HANDLE_DECL(
  ELF_PTRVAL_CONST_VOID elf_segment_end(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr);
  
  ELF_HANDLE_DECL(elf_sym) elf_sym_by_name(struct elf_binary *elf, const char *symbol);
@@ -724,7 +718,7 @@ index 22febea..4fc2496 100644
  
  const char *elf_note_name(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note); /* may return NULL */
  ELF_PTRVAL_CONST_VOID elf_note_desc(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note);
-@@ -357,7 +360,7 @@ bool elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr
+@@ -360,7 +363,7 @@ bool elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr
  /* ------------------------------------------------------------------------ */
  /* xc_libelf_loader.c                                                       */
  
@@ -733,7 +727,7 @@ index 22febea..4fc2496 100644
    /*
     * image and size must be correct.  They will be recorded in
     * *elf, and must remain valid while the elf is in use.
-@@ -370,7 +373,7 @@ void elf_set_log(struct elf_binary *elf, elf_log_callback*,
+@@ -373,7 +376,7 @@ void elf_set_log(struct elf_binary *elf, elf_log_callback*,
  #endif
  
  void elf_parse_binary(struct elf_binary *elf);
@@ -742,7 +736,7 @@ index 22febea..4fc2496 100644
  
  ELF_PTRVAL_VOID elf_get_ptr(struct elf_binary *elf, unsigned long addr);
  uint64_t elf_lookup_addr(struct elf_binary *elf, const char *symbol);
-@@ -383,7 +386,7 @@ const char *elf_check_broken(const struct elf_binary *elf); /* NULL means OK */
+@@ -386,7 +389,7 @@ const char *elf_check_broken(const struct elf_binary *elf); /* NULL means OK */
  /* ------------------------------------------------------------------------ */
  /* xc_libelf_relocate.c                                                     */
  
@@ -751,7 +745,7 @@ index 22febea..4fc2496 100644
  
  /* ------------------------------------------------------------------------ */
  /* xc_libelf_dominfo.c                                                      */
-@@ -417,7 +420,7 @@ struct elf_dom_parms {
+@@ -420,7 +423,7 @@ struct elf_dom_parms {
      char guest_ver[16];
      char xen_ver[16];
      char loader[16];

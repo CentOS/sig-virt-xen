@@ -1,7 +1,7 @@
-From d9d5d3ad927503fe89eece9b8e19eaab3e335e94 Mon Sep 17 00:00:00 2001
+From 9737484becab4a25159f1e985700eaee89690d34 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:41 +0100
-Subject: [PATCH 01/16] libelf: abolish libelf-relocate.c
+Date: Fri, 14 Jun 2013 16:43:15 +0100
+Subject: [PATCH 01/23] libelf: abolish libelf-relocate.c
 
 This file is not actually used.  It's not built in Xen's instance of
 libelf; in libxc's it's built but nothing in it is called.  Do not
@@ -10,6 +10,8 @@ compile it in libxc, and delete it.
 This reduces the amount of work we need to do in forthcoming patches
 to libelf (particularly since as libelf-relocate.c is not used it is
 probably full of bugs).
+
+This is part of the fix to a security issue, XSA-55.
 
 Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
 Acked-by: Ian Campbell <ian.campbell@citrix.com>

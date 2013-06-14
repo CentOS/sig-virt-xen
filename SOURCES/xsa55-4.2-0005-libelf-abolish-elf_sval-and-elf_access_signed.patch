@@ -1,9 +1,11 @@
-From 917217105a652c06bd2139fd34f0e6f03f4795d0 Mon Sep 17 00:00:00 2001
+From 83ec905922b496e1a5756e3a88405eb6c2c6ba88 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:41 +0100
-Subject: [PATCH 04/16] libelf: abolish elf_sval and elf_access_signed
+Date: Fri, 14 Jun 2013 16:43:16 +0100
+Subject: [PATCH 05/23] libelf: abolish elf_sval and elf_access_signed
 
 These are not used anywhere.
+
+This is part of the fix to a security issue, XSA-55.
 
 Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
 Acked-by: Ian Campbell <ian.campbell@citrix.com>

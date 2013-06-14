@@ -1,7 +1,7 @@
-From ad1886e0b717d5455e57ac8c0556ddfac334f0e7 Mon Sep 17 00:00:00 2001
+From 3fb6ccf2faccaf5e22e33a3155ccc72d732896d8 Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:43 +0100
-Subject: [PATCH 13/16] libelf: use C99 bool for booleans
+Date: Fri, 14 Jun 2013 16:43:18 +0100
+Subject: [PATCH 14/23] libelf: use C99 bool for booleans
 
 We want to remove uses of "int" because signed integers have
 undesirable undefined behaviours on overflow.  Malicious compilers can
@@ -25,10 +25,10 @@ zero depending on the value, which would mean a behavioural change in
 this patch, but it seems implausible that treating 0x????????00000000
 as false could have been intended.)
 
-Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+This is part of the fix to a security issue, XSA-55.
 
-v3: Use <stdbool.h>'s bool (or _Bool) instead of defining elf_bool.
-    Split this into a separate patch.
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Acked-by: George Dunlap <george.dunlap@eu.citrix.com>
 ---
  tools/libxc/xc_dom_elfloader.c     |    8 ++++----
  xen/common/libelf/libelf-dominfo.c |    2 +-
@@ -39,7 +39,7 @@ v3: Use <stdbool.h>'s bool (or _Bool) instead of defining elf_bool.
  6 files changed, 23 insertions(+), 21 deletions(-)
 
 diff --git a/tools/libxc/xc_dom_elfloader.c b/tools/libxc/xc_dom_elfloader.c
-index c7958ec..3738250 100644
+index 4fb4da2..9ba64ae 100644
 --- a/tools/libxc/xc_dom_elfloader.c
 +++ b/tools/libxc/xc_dom_elfloader.c
 @@ -34,7 +34,7 @@
@@ -127,7 +127,7 @@ index 280dfd1..277be04 100644
  #define safe_strcpy(d,s)                        \
  do { strncpy((d),(s),sizeof((d))-1);            \
 diff --git a/xen/common/libelf/libelf-tools.c b/xen/common/libelf/libelf-tools.c
-index 9c13377..ac6438f 100644
+index 744027e..fa58f76 100644
 --- a/xen/common/libelf/libelf-tools.c
 +++ b/xen/common/libelf/libelf-tools.c
 @@ -31,7 +31,7 @@ const char *elf_check_broken(const struct elf_binary *elf)
@@ -139,7 +139,7 @@ index 9c13377..ac6438f 100644
                                 const void *region, uint64_t regionsize)
      /*
       * Returns true if the putative memory area [ptrval,ptrval+size>
-@@ -50,7 +50,7 @@ static int elf_ptrval_in_range(elf_ptrval ptrval, uint64_t size,
+@@ -53,7 +53,7 @@ static int elf_ptrval_in_range(elf_ptrval ptrval, uint64_t size,
      return 1;
  }
  
@@ -148,7 +148,7 @@ index 9c13377..ac6438f 100644
                    uint64_t ptrval, size_t size)
  {
      if ( elf_ptrval_in_range(ptrval, size, elf->image_base, elf->size) )
-@@ -89,7 +89,7 @@ uint64_t elf_access_unsigned(struct elf_binary * elf, elf_ptrval base,
+@@ -92,7 +92,7 @@ uint64_t elf_access_unsigned(struct elf_binary * elf, elf_ptrval base,
                               uint64_t moreoffset, size_t size)
  {
      elf_ptrval ptrval = base + moreoffset;
@@ -157,7 +157,7 @@ index 9c13377..ac6438f 100644
      const uint8_t *u8;
      const uint16_t *u16;
      const uint32_t *u32;
-@@ -329,7 +329,7 @@ ELF_HANDLE_DECL(elf_note) elf_note_next(struct elf_binary *elf, ELF_HANDLE_DECL(
+@@ -332,7 +332,7 @@ ELF_HANDLE_DECL(elf_note) elf_note_next(struct elf_binary *elf, ELF_HANDLE_DECL(
  
  /* ------------------------------------------------------------------------ */
  
@@ -166,7 +166,7 @@ index 9c13377..ac6438f 100644
  {
      const Elf32_Ehdr *ehdr = image_start;
  
-@@ -339,7 +339,7 @@ int elf_is_elfbinary(const void *image_start, size_t image_size)
+@@ -342,7 +342,7 @@ int elf_is_elfbinary(const void *image_start, size_t image_size)
      return IS_ELF(*ehdr);
  }
  
@@ -176,7 +176,7 @@ index 9c13377..ac6438f 100644
      uint64_t p_type = elf_uval(elf, phdr, p_type);
      uint64_t p_flags = elf_uval(elf, phdr, p_flags);
 diff --git a/xen/include/xen/libelf.h b/xen/include/xen/libelf.h
-index 12d77f9..22febea 100644
+index ac93858..951430f 100644
 --- a/xen/include/xen/libelf.h
 +++ b/xen/include/xen/libelf.h
 @@ -29,6 +29,8 @@
@@ -197,7 +197,7 @@ index 12d77f9..22febea 100644
  
  #endif
  
-@@ -236,7 +238,7 @@ struct elf_binary {
+@@ -237,7 +239,7 @@ struct elf_binary {
      elf_log_callback *log_callback;
      void *log_caller_data;
  #endif
@@ -206,7 +206,7 @@ index 12d77f9..22febea 100644
      const char *broken;
  };
  
-@@ -300,8 +302,8 @@ void elf_memset_safe(struct elf_binary*, elf_ptrval dst, int c, size_t);
+@@ -301,8 +303,8 @@ void elf_memset_safe(struct elf_binary*, elf_ptrval dst, int c, size_t);
     * outside permitted areas.
     */
  
@@ -217,18 +217,19 @@ index 12d77f9..22febea 100644
  
  #define elf_store_val(elf, type, ptr, val)                              \
      ({                                                                  \
-@@ -349,8 +351,8 @@ uint64_t elf_note_numeric_array(struct elf_binary *, ELF_HANDLE_DECL(elf_note),
-                                 unsigned int unitsz, unsigned int idx);
+@@ -351,9 +353,9 @@ uint64_t elf_note_numeric_array(struct elf_binary *, ELF_HANDLE_DECL(elf_note),
  ELF_HANDLE_DECL(elf_note) elf_note_next(struct elf_binary *elf, ELF_HANDLE_DECL(elf_note) note);
  
+ /* (Only) checks that the image has the right magic number. */
 -int elf_is_elfbinary(const void *image_start, size_t image_size);
--int elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr);
 +bool elf_is_elfbinary(const void *image_start, size_t image_size);
+ 
+-int elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr);
 +bool elf_phdr_is_loadable(struct elf_binary *elf, ELF_HANDLE_DECL(elf_phdr) phdr);
  
  /* ------------------------------------------------------------------------ */
  /* xc_libelf_loader.c                                                       */
-@@ -364,7 +366,7 @@ int elf_init(struct elf_binary *elf, const char *image, size_t size);
+@@ -367,7 +369,7 @@ int elf_init(struct elf_binary *elf, const char *image, size_t size);
  void elf_set_verbose(struct elf_binary *elf);
  #else
  void elf_set_log(struct elf_binary *elf, elf_log_callback*,
@@ -237,7 +238,7 @@ index 12d77f9..22febea 100644
  #endif
  
  void elf_parse_binary(struct elf_binary *elf);
-@@ -416,7 +418,7 @@ struct elf_dom_parms {
+@@ -419,7 +421,7 @@ struct elf_dom_parms {
      char xen_ver[16];
      char loader[16];
      int pae;

@@ -1,7 +1,7 @@
-From 7fb404ee7c2ffa61f8d3be1a99cee1dcdcf87970 Mon Sep 17 00:00:00 2001
+From 59f66d58180832af6b99a9e4489031b5c2f627ab Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:42 +0100
-Subject: [PATCH 08/16] tools/xcutils/readnotes: adjust print_l1_mfn_valid_note
+Date: Fri, 14 Jun 2013 16:43:17 +0100
+Subject: [PATCH 09/23] tools/xcutils/readnotes: adjust print_l1_mfn_valid_note
 
 Use the new PTRVAL macros and elf_access_unsigned in
 print_l1_mfn_valid_note.
@@ -12,10 +12,10 @@ file for a different endianness.
 Separated out from the previous patch because this change does produce
 a difference in the generated code.
 
+This is part of the fix to a security issue, XSA-55.
+
 Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
 Acked-by: Ian Campbell <ian.campbell@citrix.com>
-
-v2: Split out into its own patch.
 ---
  tools/xcutils/readnotes.c |   11 ++++++-----
  1 files changed, 6 insertions(+), 5 deletions(-)

@@ -1,7 +1,7 @@
-From 7ea097951208852fc01645a9fceec848212aa52c Mon Sep 17 00:00:00 2001
+From 40020ab55a1e9a1674ddecdb70299fab4fe8579d Mon Sep 17 00:00:00 2001
 From: Ian Jackson <ian.jackson@eu.citrix.com>
-Date: Fri, 24 May 2013 17:52:42 +0100
-Subject: [PATCH 07/16] libelf: introduce macros for memory access and pointer handling
+Date: Fri, 14 Jun 2013 16:43:17 +0100
+Subject: [PATCH 08/23] libelf: introduce macros for memory access and pointer handling
 
 We introduce a collection of macros which abstract away all the
 pointer arithmetic and dereferences used for accessing the input ELF
@@ -14,12 +14,6 @@ elf_is_elfbinary is an exception: since it doesn't take an elf*, we
 need to handle it differently.  In a future patch we will change it to
 take, and check, a length parameter.  For now we just mark it with a
 fixme.
-
-Differences in the 4.2 backport: ELF_OBSOLETE_VOIDP_CAST includes a
-cast to uintptr_t to suppress warnings about conversions between
-integers and differently-sized pointers.  In elf_load_binary we
-include one cast to ELF_PTRVAL_VOID to narrow a 64-bit value to
-32-bit on x86_32.
 
 That this patch has no functional change can be verified as follows:
 
@@ -53,6 +47,12 @@ Verification that this is all that's needed:
 
 I have not done this verification for ARM.
 
+This is part of the fix to a security issue, XSA-55.
+
+Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
+Acked-by: Ian Campbell <ian.campbell@citrix.com>
+Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
+
 -8<- comparison-generate -8<-
  #!/bin/bash
  # usage:
@@ -68,7 +68,7 @@ I have not done this verification for ARM.
  build_rune_prefix=$2
  result_dir=$3
 
- git-clean -x -d -f
+ git clean -x -d -f
 
  cp "$our_config" .
 
@@ -109,7 +109,8 @@ I have not done this verification for ARM.
 
 -8<- function-filter -8<-
  #!/usr/bin/perl -w
- # for f in *.s; do ~/work/function-filter <$f >${f}2; done
+ # function-filter
+ # script for massaging gcc-generated labels to be consistent
  use strict;
  our @lines;
  my $sedderybody = "sub seddery () {\n";
@@ -126,19 +127,6 @@ I have not done this verification for ARM.
      print or die $!;
  }
 -8<-
-
-Signed-off-by: Ian Jackson <ian.jackson@eu.citrix.com>
-
-v3.1:
-    Change elf_store_field to verify correctly on 32-bit i386.
-
-v2 Acked-by: Ian Campbell <ian.campbell@citrix.com>
-v2 Reviewed-by: Konrad Rzeszutek Wilk <konrad.wilk@oracle.com>
-
-v2: Use Xen style for multi-line comments.
-    Postpone changes to readnotes.c:print_l1_mfn_valid_note.
-    Much improved verification instructions with new script.
-    Fixed commit message subject.
 ---
  tools/libxc/xc_dom_elfloader.c     |   30 +++---
  tools/libxc/xc_hvm_build_x86.c     |    2 +-
@@ -150,7 +138,7 @@ v2: Use Xen style for multi-line comments.
  7 files changed, 312 insertions(+), 163 deletions(-)
 
 diff --git a/tools/libxc/xc_dom_elfloader.c b/tools/libxc/xc_dom_elfloader.c
-index 8bd59ca..e481649 100644
+index e82f6e9..cc0f206 100644
 --- a/tools/libxc/xc_dom_elfloader.c
 +++ b/tools/libxc/xc_dom_elfloader.c
 @@ -115,9 +115,9 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
@@ -165,7 +153,7 @@ index 8bd59ca..e481649 100644
      size_t size;
      int h, count, type, i, tables = 0;
  
-@@ -146,11 +146,11 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -147,11 +147,11 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
          dom->bsd_symtab_start = elf_round_up(elf, dom->kernel_seg.vend);
      }
  
@@ -181,7 +169,7 @@ index 8bd59ca..e481649 100644
             elf_shdr_count(elf) * elf_size(elf, shdr));
      if ( elf_64bit(elf) )
      {
-@@ -188,7 +188,7 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -189,7 +189,7 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
      count = elf_shdr_count(&syms);
      for ( h = 0; h < count; h++ )
      {
@@ -190,7 +178,7 @@ index 8bd59ca..e481649 100644
          type = elf_uval(&syms, shdr, sh_type);
          if ( type == SHT_STRTAB )
          {
-@@ -204,9 +204,9 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -205,9 +205,9 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
              if ( i == count )
              {
                  if ( elf_64bit(&syms) )
@@ -202,7 +190,7 @@ index 8bd59ca..e481649 100644
                  continue;
              }
          }
-@@ -215,9 +215,9 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -216,9 +216,9 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
          {
              /* Mangled to be based on ELF header location. */
              if ( elf_64bit(&syms) )
@@ -214,7 +202,7 @@ index 8bd59ca..e481649 100644
              size = elf_uval(&syms, shdr, sh_size);
              maxaddr = elf_round_up(&syms, maxaddr + size);
              tables++;
-@@ -229,7 +229,7 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -230,7 +230,7 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
              if ( load )
              {
                  shdr2 = elf_shdr_by_index(elf, h);
@@ -223,7 +211,7 @@ index 8bd59ca..e481649 100644
                         elf_section_start(elf, shdr2),
                         size);
              }
-@@ -237,9 +237,9 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
+@@ -238,9 +238,9 @@ static int xc_dom_load_elf_symtab(struct xc_dom_image *dom,
  
          /* Name is NULL. */
          if ( elf_64bit(&syms) )
@@ -235,7 +223,7 @@ index 8bd59ca..e481649 100644
      }
  
      if ( tables == 0 )
-@@ -274,7 +274,7 @@ static int xc_dom_parse_elf_kernel(struct xc_dom_image *dom)
+@@ -275,7 +275,7 @@ static int xc_dom_parse_elf_kernel(struct xc_dom_image *dom)
      }
  
      /* Find the section-header strings table. */
@@ -938,7 +926,7 @@ index 2f54142..f1fd886 100644
      uint64_t p_type = elf_uval(elf, phdr, p_type);
      uint64_t p_flags = elf_uval(elf, phdr, p_flags);
 diff --git a/xen/include/xen/libelf.h b/xen/include/xen/libelf.h
-index 38e490c..bdfe323 100644
+index 38e490c..cefd3d3 100644
 --- a/xen/include/xen/libelf.h
 +++ b/xen/include/xen/libelf.h
 @@ -48,6 +48,97 @@ typedef void elf_log_callback(struct elf_binary*, void *caller_data,
@@ -1011,7 +999,7 @@ index 38e490c..bdfe323 100644
 +   * This macro provides a suitable cast.
 +   */
 +
-+#define ELF_UNSAFE_PTR(ptrval) ((void*)(ptrval))
++#define ELF_UNSAFE_PTR(ptrval) ((void*)(uintptr_t)(ptrval))
 +  /*
 +   * Turns a PTRVAL into an actual C pointer.  Before this is done
 +   * the caller must have ensured that the PTRVAL does in fact point
