@@ -10,3 +10,5 @@ db584cb0a0cc614888d7df3b196d514fdb2edd6e SOURCES/xen-4.1.2.tar.gz
 545a8f0dc3100ae30833ff1c31db3dc94b356f8f SOURCES/blktap-9960138790b9d3610b12acd153bba20235efa4f5.tar.gz
 b48cc7f375e9a5d65ff2d680f1b512dbea5a3b7c SOURCES/xen-4.2.2.tar.gz
 a36466144d5e335febe51cc4f1d9c901b4ea3b03 SOURCES/qemu-xen-4.2.2.tar.gz
+7c72e1aa870cc938afdc50bd9f2d879118aa8b99 SOURCES/xen-4.2.3.tar.gz
+87b949ee19120cafd9c1723db5dd978ac3041269 SOURCES/qemu-xen-4.2.3.tar.gz
