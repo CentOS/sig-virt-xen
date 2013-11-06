@@ -116,7 +116,7 @@ Patch107: xen-xl-set-autoballon-default-auto.patch
 #Patch130: xsa55-4.2-0023-libxc-Better-range-check-in-xc_dom_alloc_segment.patch
 #Patch131: xsa57-4.2.patch 
 #Patch132: xsa58-4.2.patch
-Patch133: xsa61-4.2-unstable.patch
+#Patch133: xsa61-4.2-unstable.patch
 Patch134: xsa62.patch
 Patch135: xsa63.patch
 Patch136: xsa64.patch
@@ -125,7 +125,7 @@ Patch138: xsa67.patch
 Patch139: xsa68.patch
 Patch140: xsa69.patch
 Patch141: xsa70.patch
-Patch142: xsa71-qemu-xen-4.2.patch
+#Patch142: xsa71-qemu-xen-4.2.patch
 Patch143: xsa72.patch
 Patch144: xsa73-4.2.patch
 
@@ -328,7 +328,6 @@ popd
 %patch1001 -p1
 %patch1003 -p1
 %patch1005 -p1
-%patch142 -p1
 
 
 pushd `pwd`
@@ -865,11 +864,10 @@ rm -rf %{buildroot}
 
 %changelog
 * Wed Nov  4 2013 Johnny Hughes <johnny@centos.org> - 4.2.3-24.el6.centos
-- Roll in patches 133 to 144 for the following XSAs:
-- XSA-61 (CVE-2013-4329), XSA-62 (CVE-2013-1442), XSA-63 (CVE-2013-4355)
+- Roll in patches 134 to 141, 143 to 144 for the following XSAs:
+- XSA-62 (CVE-2013-1442), XSA-63 (CVE-2013-4355), XSA-72 (CVE-2013-4416)
 - XSA-64 (CVE-2013-4356), XSA-66 (CVE-2013-4361), XSA-67 (CVE-2013-4368)
 - XSA-68 (CVE-2013-4369), XSA-69 (CVE-2013-4370), XSA-70 (CVE-2013-4371)
-- XSA-71 (CVE-2013-4375), XSA-72 (CVE-2013-4416)
 
 
 * Wed Sep 11 2013 Johnny Hughes <johnny@centos.org> - 4.2.3-23.el6.centos
