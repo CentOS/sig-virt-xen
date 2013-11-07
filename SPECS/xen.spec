@@ -305,7 +305,7 @@ manage Xen virtual machines.
 
 %patch134 -p1
 %patch135 -p1
-%patch136 -p1
+#%patch136 -p1
 %patch137 -p1
 %patch138 -p1
 %patch139 -p1
