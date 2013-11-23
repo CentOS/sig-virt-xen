@@ -19,7 +19,7 @@
 Summary: Xen is a virtual machine monitor
 Name:    xen
 Version: 4.2.3
-Release: 24%{?dist}
+Release: 25%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
 URL:     http://xen.org/
@@ -128,6 +128,9 @@ Patch141: xsa70.patch
 #Patch142: xsa71-qemu-xen-4.2.patch
 Patch143: xsa72.patch
 Patch144: xsa73-4.2.patch
+Patch145: xsa75-4.2.patch
+Patch146: xsa78.patch
+
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -313,6 +316,8 @@ manage Xen virtual machines.
 %patch141 -p1
 %patch143 -p1
 %patch144 -p1
+%patch145 -p1
+%patch146 -p1
 
 %patch1000 -p1
 
@@ -863,12 +868,15 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Sat Nov 23 2013 Johnny Hughes <johnny@centos.org> - 4.2.3-25.el6.centos
+- Roll in patch 145 and 146 for XSA-75 (CVE-2013-4551), XSA-78 (CVE-2013-6375) 
+
 * Wed Nov  4 2013 Johnny Hughes <johnny@centos.org> - 4.2.3-24.el6.centos
 - Roll in patches 134 to 141, 143 to 144 for the following XSAs:
 - XSA-62 (CVE-2013-1442), XSA-63 (CVE-2013-4355), XSA-72 (CVE-2013-4416)
 - XSA-64 (CVE-2013-4356), XSA-66 (CVE-2013-4361), XSA-67 (CVE-2013-4368)
 - XSA-68 (CVE-2013-4369), XSA-69 (CVE-2013-4370), XSA-70 (CVE-2013-4371)
-
+- XSA-73 (CVE-2013-4494)
 
 * Wed Sep 11 2013 Johnny Hughes <johnny@centos.org> - 4.2.3-23.el6.centos
 - upgraded to upstream 4.2.3
