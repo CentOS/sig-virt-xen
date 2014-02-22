@@ -7,8 +7,10 @@ SOURCES/pciutils-2.2.9.tar.bz2
 SOURCES/qemu-xen-4.2.1.tar.gz
 SOURCES/qemu-xen-4.2.2.tar.gz
 SOURCES/qemu-xen-4.2.3.tar.gz
+SOURCES/qemu-xen-4.2.4.tar.gz
 SOURCES/xen-4.1.2.tar.gz
 SOURCES/xen-4.2.1.tar.gz
 SOURCES/xen-4.2.2.tar.gz
 SOURCES/xen-4.2.3.tar.gz
+SOURCES/xen-4.2.4.tar.gz
 SOURCES/zlib-1.2.3.tar.gz

@@ -18,7 +18,7 @@
 
 Summary: Xen is a virtual machine monitor
 Name:    xen
-Version: 4.2.3
+Version: 4.2.4
 Release: 28%{?dist}
 Group:   Development/Libraries
 License: GPLv2+ and LGPLv2+ and BSD
@@ -54,7 +54,7 @@ Source47: xendomains.service
 Source48: libexec.xendomains
 Source49: tmpfiles.d.xen.conf
 
-Source100: qemu-xen-4.2.3.tar.gz
+Source100: qemu-xen-4.2.4.tar.gz
 Source101: blktap-9960138790b9d3610b12acd153bba20235efa4f5.tar.gz
 
 Patch1: xen-initscript.patch
@@ -117,28 +117,28 @@ Patch107: xen-xl-set-autoballon-default-auto.patch
 #Patch131: xsa57-4.2.patch 
 #Patch132: xsa58-4.2.patch
 #Patch133: xsa61-4.2-unstable.patch
-Patch134: xsa62.patch
-Patch135: xsa63.patch
-Patch136: xsa64.patch
-Patch137: xsa66.patch
-Patch138: xsa67.patch
-Patch139: xsa68.patch
-Patch140: xsa69.patch
-Patch141: xsa70.patch
+#Patch134: xsa62.patch
+#Patch135: xsa63.patch
+#Patch136: xsa64.patch
+#Patch137: xsa66.patch
+#Patch138: xsa67.patch
+#Patch139: xsa68.patch
+#Patch140: xsa69.patch
+#Patch141: xsa70.patch
 #Patch142: xsa71-qemu-xen-4.2.patch
-Patch143: xsa72.patch
-Patch144: xsa73-4.2.patch
-Patch145: xsa75-4.2.patch
-Patch146: xsa78.patch
-Patch147: xsa74-4.1-4.2.patch
-Patch148: xsa76.patch
-Patch149: xsa80.patch
-Patch150: xsa82.patch
-Patch151: xsa83.patch
-Patch152: xsa87-4.2.patch
-Patch153: xsa84-4.2.patch
-Patch154: xsa85.patch
-Patch155: xsa86.patch
+#Patch143: xsa72.patch
+#Patch144: xsa73-4.2.patch
+#Patch145: xsa75-4.2.patch
+#Patch146: xsa78.patch
+#Patch147: xsa74-4.1-4.2.patch
+#Patch148: xsa76.patch
+#Patch149: xsa80.patch
+#Patch150: xsa82.patch
+#Patch151: xsa83.patch
+#Patch152: xsa87-4.2.patch
+#Patch153: xsa84-4.2.patch
+#Patch154: xsa85.patch
+#Patch155: xsa86.patch
 
 Patch1000: xen-centos-disable-CFLAGS-for-qemu.patch
 Patch1001: xen-centos-disableWerror-blktap25.patch
@@ -314,27 +314,27 @@ manage Xen virtual machines.
 %patch106 -p1
 %patch107 -p1
 
-%patch134 -p1
-%patch135 -p1
+#%patch134 -p1
+#%patch135 -p1
 #%patch136 -p1
-%patch137 -p1
-%patch138 -p1
-%patch139 -p1
-%patch140 -p1
-%patch141 -p1
-%patch143 -p1
-%patch144 -p1
-%patch145 -p1
-%patch146 -p1
-%patch147 -p1
-%patch148 -p1
-%patch149 -p1
-%patch150 -p1
-%patch151 -p1
-%patch152 -p1
-%patch153 -p1
-%patch154 -p1
-%patch155 -p1
+#%patch137 -p1
+#%patch138 -p1
+#%patch139 -p1
+#%patch140 -p1
+#%patch141 -p1
+#%patch143 -p1
+#%patch144 -p1
+#%patch145 -p1
+#%patch146 -p1
+#%patch147 -p1
+#%patch148 -p1
+#%patch149 -p1
+#%patch150 -p1
+#%patch151 -p1
+#%patch152 -p1
+#%patch153 -p1
+#%patch154 -p1
+#%patch155 -p1
 
 %patch1000 -p1
 
@@ -885,6 +885,10 @@ rm -rf %{buildroot}
 %endif
 
 %changelog
+* Sat Feb 22 2014 Johnny Hughes <johnny@centos.org> - 4.2.4-28.el6.centos
+- upgrade to upstream version 4.2.4
+
+
 * Tue Feb 11 2014 Johnny Hughes <johnny@centos.org> - 4.2.3-28.el6.centos
 - Roll in Patches 153, 154, and 155
   XSA-84 (CVE-2014-1891, CVE-2014-1892, CVE-2014-1893, CVE-2014-1894)
