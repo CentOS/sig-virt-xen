@@ -88,7 +88,7 @@ Patch65: xen.git-9c23a1d0eb7a6b5e3273d527cfd7960838fbfee6.patch
 #Patch93: xsa53-4.2.patch
 #Patch94: xsa54.patch
 Patch100: xen-configure-xend.patch
-Patch105: xsa48-4.2.patch
+#Patch105: xsa48-4.2.patch
 Patch106: xen-xl-autoballon-with-auto-option.patch
 Patch107: xen-xl-set-autoballon-default-auto.patch
 #Patch108: xsa55-4.2-0001-libelf-abolish-libelf-relocate.c.patch
@@ -354,7 +354,7 @@ popd
 
 pushd `pwd`
 cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/qemu-xen
-%patch105 -p1
+#%patch105 -p1
 popd
 
 # stubdom sources
