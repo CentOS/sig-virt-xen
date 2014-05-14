@@ -1,0 +1,1209 @@
+From 6297f541b6341cadbae6da5c4e1b18375d92dc71 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 15:49:22 +0100
+Subject: [PATCH] Fix up xend init scripts
+
+---
+ tools/misc/xend                           |   89 +----------------------------
+ tools/python/xen/xend/osdep.py            |    2 +-
+ tools/python/xen/xend/server/SrvDaemon.py |    9 ++-
+ 3 files changed, 11 insertions(+), 89 deletions(-)
+
+diff --git a/tools/misc/xend b/tools/misc/xend
+index 9ef0210..0876ee2 100644
+--- a/tools/misc/xend
++++ b/tools/misc/xend
+@@ -8,103 +8,18 @@
+ """Xen management daemon.
+    Provides console server and HTTP management api.
+ 
+-   Run:
+-   xend start
+-
+-   Restart:
+-   xend restart
+-
+-   The daemon is stopped with:
+-   xend stop
+-
+    The daemon should reconnect to device control interfaces
+    and recover its state when restarted.
+ 
+-   On Solaris, the daemons are SMF managed, and you should not attempt
+-   to start xend by hand.
+ """
+-import fcntl
+-import glob
+-import os
+-import os.path
+ import sys
+-import socket
+-import signal
+-import time
+-import commands
+-
+ from xen.xend.server import SrvDaemon
+ 
+-class CheckError(ValueError):
+-    pass
+-
+-def hline():
+-    print >>sys.stderr, "*" * 70
+-
+-def msg(message):
+-    print >>sys.stderr, "*" * 3, message
+-
+-def check_logging():
+-    """Check python logging is installed and raise an error if not.
+-    Logging is standard from Python 2.3 on.
+-    """
+-    try:
+-        import logging
+-    except ImportError:
+-        hline()
+-        msg("Python logging is not installed.")
+-        msg("Use 'make install-logging' at the xen root to install.")
+-        msg("")
+-        msg("Alternatively download and install from")
+-        msg("http://www.red-dove.com/python_logging.html")
+-        hline()
+-        raise CheckError("logging is not installed")
+-
+-def check_user():
+-    """Check that the effective user id is 0 (root).
+-    """
+-    if os.geteuid() != 0:
+-        hline()
+-        msg("Xend must be run as root.")
+-        hline()
+-        raise CheckError("invalid user")
+-
+-def start_daemon(daemon, *args):
+-    if os.fork() == 0:
+-        os.execvp(daemon, (daemon,) + args)
+-
+-def start_blktapctrl():
+-    start_daemon("blktapctrl", "")
+-
+ def main():
+-    try:
+-        check_logging()
+-        check_user()
+-    except CheckError:
+-        sys.exit(1)
+-    
+     daemon = SrvDaemon.instance()
+-    if not sys.argv[1:]:
+-        print 'usage: %s {start|stop|reload|restart}' % sys.argv[0]
+-    elif sys.argv[1] == 'start':
+-        if os.uname()[0] != "SunOS":
+-            start_blktapctrl()
+-        return daemon.start()
+-    elif sys.argv[1] == 'trace_start':
+-        start_blktapctrl()
+-        return daemon.start(trace=1)
+-    elif sys.argv[1] == 'stop':
+-        return daemon.stop()
+-    elif sys.argv[1] == 'reload':
+-        return daemon.reloadConfig()
+-    elif sys.argv[1] == 'restart':
+-        start_blktapctrl()
+-        return daemon.stop() or daemon.start()
+-    elif sys.argv[1] == 'status':
++    if sys.argv[1:] and sys.argv[1] == 'status':
+         return daemon.status()
+-    else:
+-        print 'not an option:', sys.argv[1]
+-    return 1
++    return daemon.start()
+ 
+ if __name__ == '__main__':
+     sys.exit(main())
+diff --git a/tools/python/xen/xend/osdep.py b/tools/python/xen/xend/osdep.py
+index b51dd2e..c1260a8 100644
+--- a/tools/python/xen/xend/osdep.py
++++ b/tools/python/xen/xend/osdep.py
+@@ -22,7 +22,7 @@ import commands
+ 
+ _xend_autorestart = {
+     "NetBSD": True,
+-    "Linux": True,
++    "Linux": False,
+     "SunOS": False,
+ }
+ 
+diff --git a/tools/python/xen/xend/server/SrvDaemon.py b/tools/python/xen/xend/server/SrvDaemon.py
+index 0a330f1..0d7583c 100644
+--- a/tools/python/xen/xend/server/SrvDaemon.py
++++ b/tools/python/xen/xend/server/SrvDaemon.py
+@@ -110,7 +110,14 @@ class Daemon:
+         # Fork, this allows the group leader to exit,
+         # which means the child can never again regain control of the
+         # terminal
+-        if os.fork():
++        child = os.fork()
++        if child:
++            if not osdep.xend_autorestart:
++                pidfile = open(XEND_PID_FILE, 'w')
++                try:
++                    pidfile.write(str(child))
++                finally:
++                    pidfile.close()
+             os._exit(0)
+ 
+         # Detach from standard file descriptors, and redirect them to
+-- 
+1.7.9.5
+
+
+From 194cba517ee91960655331d6bad9e642541667c8 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 15:54:59 +0100
+Subject: [PATCH] Change dumpdir to /var/lib/xen
+
+---
+ tools/Makefile                          |    2 +-
+ tools/python/xen/xend/XendDomainInfo.py |    4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tools/Makefile b/tools/Makefile
+index d8c8cc0..5545a87 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -66,7 +66,7 @@ all: subdirs-all
+ 
+ .PHONY: install
+ install: subdirs-install
+-	$(INSTALL_DIR) $(DESTDIR)/var/xen/dump
++	$(INSTALL_DIR) $(DESTDIR)/var/lib/xen/dump
+ 	$(INSTALL_DIR) $(DESTDIR)/var/log/xen
+ 	$(INSTALL_DIR) $(DESTDIR)/var/lib/xen
+ 	$(INSTALL_DIR) $(DESTDIR)/var/lock/subsys
+diff --git a/tools/python/xen/xend/XendDomainInfo.py b/tools/python/xen/xend/XendDomainInfo.py
+index 456e325..87f2107 100644
+--- a/tools/python/xen/xend/XendDomainInfo.py
++++ b/tools/python/xen/xend/XendDomainInfo.py
+@@ -2283,7 +2283,7 @@ class XendDomainInfo:
+             # To prohibit directory traversal
+             based_name = os.path.basename(self.info['name_label'])
+             
+-            coredir = "/var/xen/dump/%s" % (based_name)
++            coredir = "/var/lib/xen/dump/%s" % (based_name)
+             if not os.path.exists(coredir):
+                 try:
+                     mkdir.parents(coredir, stat.S_IRWXU)
+@@ -2292,7 +2292,7 @@ class XendDomainInfo:
+ 
+             if not os.path.isdir(coredir):
+                 # Use former directory to dump core
+-                coredir = '/var/xen/dump'
++                coredir = '/var/lib/xen/dump'
+ 
+             this_time = time.strftime("%Y-%m%d-%H%M.%S", time.localtime())
+             corefile = "%s/%s-%s.%s.core" % (coredir, this_time,
+-- 
+1.7.9.5
+
+
+From 8e10f2ef7d682380657528ab0ed71b5aa593549b Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 15:56:30 +0100
+Subject: [PATCH] Disable iptables on the bridge
+
+---
+ tools/hotplug/Linux/vif-bridge            |    4 ----
+ tools/hotplug/Linux/xen-network-common.sh |    7 +++++++
+ 2 files changed, 7 insertions(+), 4 deletions(-)
+
+diff --git a/tools/hotplug/Linux/vif-bridge b/tools/hotplug/Linux/vif-bridge
+index f489519..854590e 100644
+--- a/tools/hotplug/Linux/vif-bridge
++++ b/tools/hotplug/Linux/vif-bridge
+@@ -101,10 +101,6 @@ case "$command" in
+         ;;
+ esac
+ 
+-if [ "$type_if" = vif ]; then
+-    handle_iptable
+-fi
+-
+ call_hooks vif post
+ 
+ log debug "Successful vif-bridge $command for $dev, bridge $bridge."
+diff --git a/tools/hotplug/Linux/xen-network-common.sh b/tools/hotplug/Linux/xen-network-common.sh
+index 8cff156..f88f9b6 100644
+--- a/tools/hotplug/Linux/xen-network-common.sh
++++ b/tools/hotplug/Linux/xen-network-common.sh
+@@ -115,6 +115,13 @@ create_bridge () {
+ 	brctl addbr ${bridge}
+ 	brctl stp ${bridge} off
+ 	brctl setfd ${bridge} 0
++	# Setting these to zero stops guest<->LAN traffic
++	# traversing the bridge from hitting the *tables
++	# rulesets. guest<->host traffic still gets processed
++	# by the host's iptables rules so this isn't a hole
++	sysctl -q -w "net.bridge.bridge-nf-call-arptables=0"
++	sysctl -q -w "net.bridge.bridge-nf-call-ip6tables=0"
++	sysctl -q -w "net.bridge.bridge-nf-call-iptables=0"
+     fi
+ }
+ 
+-- 
+1.7.9.5
+
+
+From f181632e6a04eb7aef8bb5237651cb44ec519adc Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:52:21 +0100
+Subject: [PATCH] pygrubfix.patch
+
+---
+ tools/pygrub/src/pygrub |    5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/tools/pygrub/src/pygrub b/tools/pygrub/src/pygrub
+index ca9b000..32b956e 100644
+--- a/tools/pygrub/src/pygrub
++++ b/tools/pygrub/src/pygrub
+@@ -119,6 +119,7 @@ def get_partition_offsets(file):
+     fd = os.open(file, os.O_RDONLY)
+     buf = os.read(fd, 512)
+     os.close(fd)
++    offzerocount = 0
+     for poff in (446, 462, 478, 494): # partition offsets
+ 
+         # MBR contains a 16 byte descriptor per partition
+@@ -128,6 +129,7 @@ def get_partition_offsets(file):
+         
+         # offset == 0 implies this partition is not enabled
+         if offset == 0:
++            offzerocount += 1
+             continue
+ 
+         if type == FDISK_PART_SOLARIS or type == FDISK_PART_SOLARIS_OLD:
+@@ -148,6 +150,9 @@ def get_partition_offsets(file):
+         else:
+             part_offs.append(offset)
+ 
++    if offzerocount == 4:
++        # Might be a grub boot sector pretending to be an MBR
++        part_offs.append(0)
+     return part_offs
+ 
+ class GrubLineEditor(curses.textpad.Textbox):
+-- 
+1.7.9.5
+
+
+From 4e791a4bd6de3783850de0f3d94757beccd7efd2 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:29 +0100
+Subject: [PATCH] xend.catchbt.patch
+
+---
+ tools/python/xen/xend/XendLogging.py |    6 +++++-
+ tools/python/xen/xend/image.py       |    6 +++++-
+ 2 files changed, 10 insertions(+), 2 deletions(-)
+
+diff --git a/tools/python/xen/xend/XendLogging.py b/tools/python/xen/xend/XendLogging.py
+index d95133b..3e6b8ba 100644
+--- a/tools/python/xen/xend/XendLogging.py
++++ b/tools/python/xen/xend/XendLogging.py
+@@ -132,7 +132,11 @@ def init(filename, level):
+         fileHandler = openFileHandler(filename)
+         logfilename = filename
+     except IOError:
+-        logfilename = tempfile.mkstemp("-xend.log")[1]
++        try:
++            logfilename = tempfile.mkstemp("-xend.log")[1]
++        except IOError:
++            print >>sys.stderr, ('xend/XendLogging.py: Unable to open standard or temporary log file for xend')
++            os._exit(1)
+         fileHandler = openFileHandler(logfilename)
+ 
+     fileHandler.setFormatter(logging.Formatter(LOGFILE_FORMAT, DATE_FORMAT))
+diff --git a/tools/python/xen/xend/image.py b/tools/python/xen/xend/image.py
+index 832c168..161aeb5 100644
+--- a/tools/python/xen/xend/image.py
++++ b/tools/python/xen/xend/image.py
+@@ -43,7 +43,11 @@ from xen.util import oshelp
+ from xen.util import utils
+ from xen.xend import osdep
+ 
+-xc = xen.lowlevel.xc.xc()
++try:
++    xc = xen.lowlevel.xc.xc()
++except Exception:
++    print >>sys.stderr, ('xend/image.py: Error connecting to hypervisor')
++    os._exit(1)
+ 
+ MAX_GUEST_CMDLINE = 1024
+ 
+-- 
+1.7.9.5
+
+
+From 4a7e3cea22addf2de7c3a99e7a1a65e3001c5566 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:29 +0100
+Subject: [PATCH] xend-pci-loop.patch # Don't crash due to weird PCI cards
+ (Bug 767742)
+
+---
+ tools/python/xen/util/pci.py |    7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/tools/python/xen/util/pci.py b/tools/python/xen/util/pci.py
+index adeca4b..94326b3 100644
+--- a/tools/python/xen/util/pci.py
++++ b/tools/python/xen/util/pci.py
+@@ -1275,7 +1275,12 @@ class PciDevice:
+             pass
+ 
+     def get_info_from_sysfs(self):
+-        self.find_capability(0x11)
++        try:
++            self.find_capability(0x11)
++        except PciDeviceParseError, err:
++            log.error("Caught '%s'" % err)
++            return False
++
+         sysfs_mnt = find_sysfs_mnt()
+         if sysfs_mnt == None:
+             return False
+-- 
+1.7.9.5
+
+
+From e8300589eb20c61dc90be69d3d69030d7daad67f Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:30 +0100
+Subject: [PATCH] xend.selinux.fixes.patch
+
+---
+ tools/misc/xend                           |    2 +-
+ tools/python/xen/xend/server/SrvDaemon.py |    3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/tools/misc/xend b/tools/misc/xend
+index 0876ee2..05afc0e 100644
+--- a/tools/misc/xend
++++ b/tools/misc/xend
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python -Es
+ #  -*- mode: python; -*-
+ #============================================================================
+ # Copyright (C) 2004 Mike Wray <mike.wray@hp.com>
+diff --git a/tools/python/xen/xend/server/SrvDaemon.py b/tools/python/xen/xend/server/SrvDaemon.py
+index 0d7583c..af1f546 100644
+--- a/tools/python/xen/xend/server/SrvDaemon.py
++++ b/tools/python/xen/xend/server/SrvDaemon.py
+@@ -325,7 +325,8 @@ class Daemon:
+     def set_user(self):
+         # Set the UID.
+         try:
+-            os.setuid(pwd.getpwnam(XEND_USER)[2])
++            if XEND_USER != "root":
++                os.setuid(pwd.getpwnam(XEND_USER)[2])
+             return 0
+         except KeyError:
+             print >>sys.stderr, "Error: no such user '%s'" % XEND_USER
+-- 
+1.7.9.5
+
+
+From 59f94fbaef26c2bedaa71cd23768ef5ca5974fce Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:31 +0100
+Subject: [PATCH] xen.use.fedora.seabios.patch
+
+---
+ tools/firmware/Makefile           |    2 +-
+ tools/firmware/hvmloader/Makefile |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
+index aff8e56..d157c6c 100644
+--- a/tools/firmware/Makefile
++++ b/tools/firmware/Makefile
+@@ -7,7 +7,7 @@ INST_DIR := $(DESTDIR)$(XENFIRMWAREDIR)
+ 
+ SUBDIRS-y :=
+ SUBDIRS-$(CONFIG_OVMF) += ovmf
+-SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
++#SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
+ SUBDIRS-$(CONFIG_ROMBIOS) += rombios
+ SUBDIRS-$(CONFIG_ROMBIOS) += vgabios
+ SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
+diff --git a/tools/firmware/hvmloader/Makefile b/tools/firmware/hvmloader/Makefile
+index c6e7376..0d40f57 100644
+--- a/tools/firmware/hvmloader/Makefile
++++ b/tools/firmware/hvmloader/Makefile
+@@ -70,7 +70,7 @@ endif
+ ifeq ($(CONFIG_SEABIOS),y)
+ OBJS += seabios.o
+ CFLAGS += -DENABLE_SEABIOS
+-SEABIOS_ROM := $(SEABIOS_DIR)/out/bios.bin
++SEABIOS_ROM := /usr/share/seabios/bios.bin
+ ROMS += $(SEABIOS_ROM)
+ endif
+ 
+-- 
+1.7.9.5
+
+
+From a780a9dac18516b8f6045cd3b2c6c19a3f887c25 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:32 +0100
+Subject: [PATCH] xen.use.fedora.ipxe.patch
+
+---
+ Config.mk                         |    2 +-
+ tools/firmware/Makefile           |    2 +-
+ tools/firmware/hvmloader/Makefile |    2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/Config.mk b/Config.mk
+index 9e3e688..477f09e 100644
+--- a/Config.mk
++++ b/Config.mk
+@@ -208,7 +208,7 @@ SEABIOS_UPSTREAM_TAG ?= rel-1.6.3.2
+ # Sun Mar 11 09:27:07 2012 -0400
+ # Update version to 1.6.3.2
+ 
+-ETHERBOOT_NICS ?= rtl8139 8086100e
++ETHERBOOT_NICS ?= 10ec8139 8086100e
+ 
+ # Specify which qemu-dm to use. This may be `ioemu' to use the old
+ # Mercurial in-tree version, or a local directory, or a git URL.
+diff --git a/tools/firmware/Makefile b/tools/firmware/Makefile
+index d157c6c..9e4b92d 100644
+--- a/tools/firmware/Makefile
++++ b/tools/firmware/Makefile
+@@ -10,7 +10,7 @@ SUBDIRS-$(CONFIG_OVMF) += ovmf
+ #SUBDIRS-$(CONFIG_SEABIOS) += seabios-dir
+ SUBDIRS-$(CONFIG_ROMBIOS) += rombios
+ SUBDIRS-$(CONFIG_ROMBIOS) += vgabios
+-SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
++#SUBDIRS-$(CONFIG_ROMBIOS) += etherboot
+ SUBDIRS-y += hvmloader
+ 
+ ovmf:
+diff --git a/tools/firmware/hvmloader/Makefile b/tools/firmware/hvmloader/Makefile
+index 0d40f57..c8816cd 100644
+--- a/tools/firmware/hvmloader/Makefile
++++ b/tools/firmware/hvmloader/Makefile
+@@ -48,7 +48,7 @@ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.debug.bin
+ else
+ CIRRUSVGA_ROM := ../vgabios/VGABIOS-lgpl-latest.cirrus.bin
+ endif
+-ETHERBOOT_ROMS := $(addprefix ../etherboot/ipxe/src/bin/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
++ETHERBOOT_ROMS := $(addprefix /usr/share/ipxe/, $(addsuffix .rom, $(ETHERBOOT_NICS)))
+ endif
+ 
+ ROMS := 
+-- 
+1.7.9.5
+
+
+From ac0318a86057d4a1a751ff984e7dc858f0fa59f6 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:33 +0100
+Subject: [PATCH] xen.fedora.efi.build.patch
+
+---
+ xen/Makefile              |    2 ++
+ xen/arch/x86/Makefile     |    6 +++---
+ xen/arch/x86/efi/Makefile |    2 +-
+ 3 files changed, 6 insertions(+), 4 deletions(-)
+
+diff --git a/xen/Makefile b/xen/Makefile
+index ea19923..84d14dc 100644
+--- a/xen/Makefile
++++ b/xen/Makefile
+@@ -13,6 +13,8 @@ export BASEDIR := $(CURDIR)
+ export XEN_ROOT := $(BASEDIR)/..
+ 
+ EFI_MOUNTPOINT ?= /boot/efi
++EFI_VENDOR=fedora
++LD_EFI ?= $(LD)
+ 
+ .PHONY: default
+ default: build
+diff --git a/xen/arch/x86/Makefile b/xen/arch/x86/Makefile
+index d273f83..97bf5b8 100644
+--- a/xen/arch/x86/Makefile
++++ b/xen/arch/x86/Makefile
+@@ -126,18 +126,18 @@ $(TARGET).efi: ALT_BASE = 0x$(shell $(NM) efi/relocs-dummy.o | sed -n 's, A ALT_
+ $(TARGET).efi: guard = $(if $(shell echo efi/dis* | grep disabled),:)
+ $(TARGET).efi: prelink-efi.o efi.lds efi/relocs-dummy.o $(BASEDIR)/common/symbols-dummy.o efi/mkreloc
+ 	$(foreach base, $(VIRT_BASE) $(ALT_BASE), \
+-	          $(guard) $(LD) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< efi/relocs-dummy.o \
++	          $(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< efi/relocs-dummy.o \
+ 	                $(BASEDIR)/common/symbols-dummy.o -o $(@D)/.$(@F).$(base).0 &&) :
+ 	$(guard) efi/mkreloc $(foreach base,$(VIRT_BASE) $(ALT_BASE),$(@D)/.$(@F).$(base).0) >$(@D)/.$(@F).0r.S
+ 	$(guard) $(NM) -n $(@D)/.$(@F).$(VIRT_BASE).0 | $(guard) $(BASEDIR)/tools/symbols >$(@D)/.$(@F).0s.S
+ 	$(guard) $(MAKE) -f $(BASEDIR)/Rules.mk $(@D)/.$(@F).0r.o $(@D)/.$(@F).0s.o
+ 	$(foreach base, $(VIRT_BASE) $(ALT_BASE), \
+-	          $(guard) $(LD) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< \
++	          $(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(base)) -T efi.lds -N $< \
+ 	                $(@D)/.$(@F).0r.o $(@D)/.$(@F).0s.o -o $(@D)/.$(@F).$(base).1 &&) :
+ 	$(guard) efi/mkreloc $(foreach base,$(VIRT_BASE) $(ALT_BASE),$(@D)/.$(@F).$(base).1) >$(@D)/.$(@F).1r.S
+ 	$(guard) $(NM) -n $(@D)/.$(@F).$(VIRT_BASE).1 | $(guard) $(BASEDIR)/tools/symbols >$(@D)/.$(@F).1s.S
+ 	$(guard) $(MAKE) -f $(BASEDIR)/Rules.mk $(@D)/.$(@F).1r.o $(@D)/.$(@F).1s.o
+-	$(guard) $(LD) $(call EFI_LDFLAGS,$(VIRT_BASE)) -T efi.lds -N $< \
++	$(guard) $(LD_EFI) $(call EFI_LDFLAGS,$(VIRT_BASE)) -T efi.lds -N $< \
+ 	                $(@D)/.$(@F).1r.o $(@D)/.$(@F).1s.o -o $@
+ 	if $(guard) false; then rm -f $@; echo 'EFI support disabled'; fi
+ 	rm -f $(@D)/.$(@F).[0-9]*
+diff --git a/xen/arch/x86/efi/Makefile b/xen/arch/x86/efi/Makefile
+index 514dba0..4ffd918 100644
+--- a/xen/arch/x86/efi/Makefile
++++ b/xen/arch/x86/efi/Makefile
+@@ -6,7 +6,7 @@ create = test -e $(1) || touch -t 199901010000 $(1)
+ 
+ efi := $(filter y,$(x86_64)$(shell rm -f disabled))
+ efi := $(if $(efi),$(shell $(CC) $(filter-out $(CFLAGS-y) .%.d,$(CFLAGS)) -c check.c 2>disabled && echo y))
+-efi := $(if $(efi),$(shell $(LD) -mi386pep --subsystem=10 -o check.efi check.o 2>disabled && echo y))
++efi := $(if $(efi),$(shell $(LD_EFI) -mi386pep --subsystem=10 -o check.efi check.o 2>disabled && echo y))
+ efi := $(if $(efi),$(shell rm disabled)y,$(shell $(call create,boot.init.o); $(call create,runtime.o)))
+ 
+ extra-$(efi) += boot.init.o relocs-dummy.o runtime.o compat.o
+-- 
+1.7.9.5
+
+
+From c29d6ccc7705b5f5977bf3026de673e244ae89af Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:34 +0100
+Subject: [PATCH] xen.fedora19.buildfix.patch
+
+---
+ tools/debugger/gdbsx/xg/xg_main.c |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/debugger/gdbsx/xg/xg_main.c b/tools/debugger/gdbsx/xg/xg_main.c
+index 64c7484..a41ed0a 100644
+--- a/tools/debugger/gdbsx/xg/xg_main.c
++++ b/tools/debugger/gdbsx/xg/xg_main.c
+@@ -179,7 +179,7 @@ _domctl_hcall(uint32_t cmd,            /* which domctl hypercall */
+     hypercall.op = __HYPERVISOR_domctl;
+     hypercall.arg[0] = (unsigned long)&domctl;
+ 
+-    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (ulong)&hypercall);
++    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (unsigned long)&hypercall);
+     if (domctlarg && sz)
+         munlock(domctlarg, sz);
+     return rc;
+@@ -219,7 +219,7 @@ _check_hyp(int guest_bitness)
+     hypercall.arg[0] = (unsigned long)XENVER_capabilities;
+     hypercall.arg[1] = (unsigned long)&xen_caps;
+ 
+-    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (ulong)&hypercall);
++    rc = ioctl(_dom0_fd, IOCTL_PRIVCMD_HYPERCALL, (unsigned long)&hypercall);
+     munlock(&xen_caps, sizeof(xen_caps));
+     XGTRC("XENCAPS:%s\n", xen_caps);
+ 
+-- 
+1.7.9.5
+
+
+From 400c86efa8784a6d6d0c09420bbd42d8bbd22627 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:35 +0100
+Subject: [PATCH] xl.list.-l.format.patch xl list -l should produce readable
+ output when built with yajl2 so it is compatible with the
+ xendomains script.
+
+Signed-off-by: Michael Young <m.a.young@durham.ac.uk>
+---
+ tools/libxl/libxl_json.h |    6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/tools/libxl/libxl_json.h b/tools/libxl/libxl_json.h
+index 1464459..a4dd8fc 100644
+--- a/tools/libxl/libxl_json.h
++++ b/tools/libxl/libxl_json.h
+@@ -54,7 +54,11 @@ static inline yajl_handle libxl__yajl_alloc(const yajl_callbacks *callbacks,
+ 
+ static inline yajl_gen libxl_yajl_gen_alloc(const yajl_alloc_funcs *allocFuncs)
+ {
+-    return yajl_gen_alloc(allocFuncs);
++    yajl_gen g;
++    g = yajl_gen_alloc(allocFuncs);
++    if (g)
++        yajl_gen_config(g, yajl_gen_beautify, 1);
++    return g;
+ }
+ 
+ #else /* !HAVE_YAJL_V2 */
+-- 
+1.7.9.5
+
+
+From b4dea605f8513d6f8afa772e468514f92ea023fa Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:36 +0100
+Subject: [PATCH] fix wrong path while calling pygrub and libxl-save-helper
+
+in current xen x86_64, the default libexec directory is /usr/lib/xen/bin,
+while the private binder is /usr/lib64/xen/bin. but some commands(pygrub,
+libxl-save-helper) located in private binder directory is called from
+libexec directory which lead to the following error:
+1, for pygrub bootloader:
+
+libxl: debug: libxl_bootloader.c:429:bootloader_disk_attached_cb: /usr/lib/xen/bin/pygrub doesn't exist, falling back to config path
+
+2, for libxl-save-helper:
+
+libxl: cannot execute /usr/lib/xen/bin/libxl-save-helper: No such file or directory
+libxl: error: libxl_utils.c:363:libxl_read_exactly: file/stream truncated reading ipc msg header from domain 3 save/restore helper stdout pipe
+libxl: error: libxl_exec.c:118:libxl_report_child_exitstatus: domain 3 save/restore helper [10222] exited with error status 255
+
+there are two ways to fix above error. the first one is make such command
+store in the /usr/lib/xen/bin and /usr/lib64/xen/bin(symbol link to
+previous), e.g. qemu-dm. The second way is using private binder dir
+instead of libexec dir. e.g. xenconsole.
+For these cases, the latter one is suitable.
+
+Signed-off-by: Bamvor Jian Zhang <bjzhang@suse.com>
+Committed-by: Ian Campbell <ian.campbell@citrix.com>
+---
+ tools/libxl/libxl_bootloader.c   |    2 +-
+ tools/libxl/libxl_save_callout.c |    2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/tools/libxl/libxl_bootloader.c b/tools/libxl/libxl_bootloader.c
+index e103ee9..ed12b2c 100644
+--- a/tools/libxl/libxl_bootloader.c
++++ b/tools/libxl/libxl_bootloader.c
+@@ -419,7 +419,7 @@ static void bootloader_disk_attached_cb(libxl__egc *egc,
+         const char *bltmp;
+         struct stat st;
+ 
+-        bltmp = libxl__abs_path(gc, bootloader, libxl__libexec_path());
++        bltmp = libxl__abs_path(gc, bootloader, libxl__private_bindir_path());
+         /* Check to see if the file exists in this location; if not,
+          * fall back to checking the path */
+         LOG(DEBUG, "Checking for bootloader in libexec path: %s", bltmp);
+diff --git a/tools/libxl/libxl_save_callout.c b/tools/libxl/libxl_save_callout.c
+index 078b7ee..f164e98 100644
+--- a/tools/libxl/libxl_save_callout.c
++++ b/tools/libxl/libxl_save_callout.c
+@@ -172,7 +172,7 @@ static void run_helper(libxl__egc *egc, libxl__save_helper_state *shs,
+     shs->stdout_what = GCSPRINTF("domain %"PRIu32" save/restore helper"
+                                  " stdout pipe", domid);
+ 
+-    *arg++ = getenv("LIBXL_SAVE_HELPER") ?: LIBEXEC "/" "libxl-save-helper";
++    *arg++ = getenv("LIBXL_SAVE_HELPER") ?: PRIVATE_BINDIR "/" "libxl-save-helper";
+     *arg++ = mode_arg;
+     const char **stream_fd_arg = arg++;
+     for (i=0; i<num_argnums; i++)
+-- 
+1.7.9.5
+
+
+From b07227c47e051ddde553808822e5139dda999e61 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:37 +0100
+Subject: [PATCH] xen-configure-xend.patch
+
+---
+ tools/examples/xend-config.sxp |   11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/tools/examples/xend-config.sxp b/tools/examples/xend-config.sxp
+index 0896a27..cea12e1 100644
+--- a/tools/examples/xend-config.sxp
++++ b/tools/examples/xend-config.sxp
+@@ -58,11 +58,11 @@
+ 
+ 
+ #(xend-http-server no)
+-#(xend-unix-server no)
++(xend-unix-server yes)
+ #(xend-tcp-xmlrpc-server no)
+ #(xend-unix-xmlrpc-server yes)
+-#(xend-relocation-server no)
+-(xend-relocation-server yes)
++(xend-relocation-server no)
++#(xend-relocation-server yes)
+ #(xend-relocation-ssl-server no)
+ #(xend-udev-event-server no)
+ 
+@@ -170,7 +170,8 @@
+ # two fake interfaces per guest domain.  To do things like this, write
+ # yourself a wrapper script, and call network-bridge from it, as appropriate.
+ #
+-(network-script network-bridge)
++#(network-script network-bridge)
++(network-script /bin/true)
+ 
+ # The script used to control virtual interfaces.  This can be overridden on a
+ # per-vif basis when creating a domain or a configuring a new vif.  The
+@@ -203,7 +204,7 @@
+ # dom0-min-mem is the lowest permissible memory level (in MB) for dom0.
+ # This is a minimum both for auto-ballooning (as enabled by
+ # enable-dom0-ballooning below) and for xm mem-set when applied to dom0.
+-(dom0-min-mem 196)
++(dom0-min-mem 256)
+ 
+ # Whether to enable auto-ballooning of dom0 to allow domUs to be created.
+ # If enable-dom0-ballooning = no, dom0 will never balloon out.
+-- 
+1.7.9.5
+
+
+From e83ee948c3022b08db3fb0feb5f5e18fd4fef14c Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:38 +0100
+Subject: [PATCH]     xl: extend autoballoon xl.conf option with an "auto"
+ option
+
+    autoballoon=1 is not recommened if dom0_mem was used to reduce the
+    amount of dom0 memory.  Instead of requiring users to change xl.conf
+    if they do this, extend the autoballoon option with a new choice:
+    "auto".
+
+    With autoballoon="auto", autoballooning will be disabled if dom0_mem
+    was used on the Xen command line.
+
+    For consistency, accept "on" and "off" as valid autoballoon options (1
+    and 0 are still accepted).
+
+    The default remains "on" for now.
+
+    Signed-off-by: David Vrabel <[hidden email]>
+    Acked-by: Ian Jackson <[hidden email]>
+---
+ docs/man/xl.conf.pod.5 |   21 ++++++++++++++-------
+ tools/examples/xl.conf |    7 ++++---
+ tools/libxl/xl.c       |   36 ++++++++++++++++++++++++++++++++++--
+ 3 files changed, 52 insertions(+), 12 deletions(-)
+
+diff --git a/docs/man/xl.conf.pod.5 b/docs/man/xl.conf.pod.5
+index 82c6b20..959f494 100644
+--- a/docs/man/xl.conf.pod.5
++++ b/docs/man/xl.conf.pod.5
+@@ -45,15 +45,22 @@ The semantics of each C<KEY> defines which form of C<VALUE> is required.
+ 
+ =over 4
+ 
+-=item B<autoballoon=BOOLEAN>
++=item B<autoballoon="off"|"on"|"auto">
+ 
+-If disabled then C<xl> will not attempt to reduce the amount of memory
+-assigned to domain 0 in order to create free memory when starting a
+-new domain. You are strongly recommended to set this to C<0>
+-(C<False>) if you use the C<dom0_mem> hypervisor command line to
+-reduce the amount of memory given to domain 0 by default.
++If set to "on" then C<xl> will automatically reduce the amount of
++memory assigned to domain 0 in order to free memory for new domains.
+ 
+-Default: C<1>
++If set to "off" then C<xl> will not automatically reduce the amount of
++domain 0 memory.
++
++If set to "auto" then auto-ballooning will be disabled if the
++C<dom0_mem> option was provided on the Xen command line.
++
++You are strongly recommended to set this to C<"off"> (or C<"auto">) if
++you use the C<dom0_mem> hypervisor command line to reduce the amount
++of memory given to domain 0 by default.
++
++Default: C<"on">
+ 
+ =item B<run_hotplug_scripts=BOOLEAN>
+ 
+diff --git a/tools/examples/xl.conf b/tools/examples/xl.conf
+index 28ab796..e770b08 100644
+--- a/tools/examples/xl.conf
++++ b/tools/examples/xl.conf
+@@ -1,8 +1,9 @@
+ ## Global XL config file ##
+ 
+-# automatically balloon down dom0 when xen doesn't have enough free
+-# memory to create a domain
+-#autoballoon=1
++# Control whether dom0 is ballooned down when xen doesn't have enough
++# free memory to create a domain.  "auto" means only balloon if dom0
++# starts with all the host's memory.
++#autoballoon="auto"
+ 
+ # full path of the lockfile used by xl during domain creation
+ #lockfile="/var/lock/xl"
+diff --git a/tools/libxl/xl.c b/tools/libxl/xl.c
+index f31e836..0592f6b 100644
+--- a/tools/libxl/xl.c
++++ b/tools/libxl/xl.c
+@@ -26,6 +26,7 @@
+ #include <fcntl.h>
+ #include <ctype.h>
+ #include <inttypes.h>
++#include <regex.h>
+ 
+ #include "libxl.h"
+ #include "libxl_utils.h"
+@@ -47,6 +48,29 @@ enum output_format default_output_format = OUTPUT_FORMAT_JSON;
+ 
+ static xentoollog_level minmsglevel = XTL_PROGRESS;
+ 
++/* Get autoballoon option based on presence of dom0_mem Xen command
++   line option. */
++static int auto_autoballoon(void)
++{
++    const libxl_version_info *info;
++    regex_t regex;
++    int ret;
++
++    info = libxl_get_version_info(ctx);
++    if (!info)
++        return 1; /* default to on */
++
++    ret = regcomp(&regex,
++                  "(^| )dom0_mem=((|min:|max:)[0-9]+[bBkKmMgG]?,?)+($| )",
++                  REG_NOSUB | REG_EXTENDED);
++    if (ret)
++        return 1;
++
++    ret = regexec(&regex, info->commandline, 0, NULL, 0);
++    regfree(&regex);
++    return ret == REG_NOMATCH;
++}
++
+ static void parse_global_config(const char *configfile,
+                               const char *configfile_data,
+                               int configfile_len)
+@@ -68,8 +92,16 @@ static void parse_global_config(const char *configfile,
+         exit(1);
+     }
+ 
+-    if (!xlu_cfg_get_long (config, "autoballoon", &l, 0))
+-        autoballoon = l;
++    if (!xlu_cfg_get_string(config, "autoballoon", &buf, 0)) {
++        if (!strcmp(buf, "on") || !strcmp(buf, "1"))
++            autoballoon = 1;
++        else if (!strcmp(buf, "off") || !strcmp(buf, "0"))
++            autoballoon = 0;
++        else if (!strcmp(buf, "auto"))
++            autoballoon = auto_autoballoon();
++        else
++            fprintf(stderr, "invalid autoballoon option");
++    }
+ 
+     if (!xlu_cfg_get_long (config, "run_hotplug_scripts", &l, 0))
+         run_hotplug_scripts = l;
+-- 
+1.7.9.5
+
+
+From 2b629d1ac9f3ecaa7cbae735fd41d8ea2964d959 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:39 +0100
+Subject: [PATCH]     xl: default autoballoon option to "auto"
+
+    In xl.conf, autoballoon="auto" will do the right thing for most
+    people.  Make it the default (instead of "on").
+
+    Signed-off-by: David Vrabel <[hidden email]>
+    Committed-by: Ian Jackson <[hidden email]>
+---
+ docs/man/xl.conf.pod.5 |    2 +-
+ tools/libxl/xl.c       |    6 ++++--
+ 2 files changed, 5 insertions(+), 3 deletions(-)
+
+diff --git a/docs/man/xl.conf.pod.5 b/docs/man/xl.conf.pod.5
+index 959f494..de55b86 100644
+--- a/docs/man/xl.conf.pod.5
++++ b/docs/man/xl.conf.pod.5
+@@ -60,7 +60,7 @@ You are strongly recommended to set this to C<"off"> (or C<"auto">) if
+ you use the C<dom0_mem> hypervisor command line to reduce the amount
+ of memory given to domain 0 by default.
+ 
+-Default: C<"on">
++Default: C<"auto">
+ 
+ =item B<run_hotplug_scripts=BOOLEAN>
+ 
+diff --git a/tools/libxl/xl.c b/tools/libxl/xl.c
+index 0592f6b..7423a6b 100644
+--- a/tools/libxl/xl.c
++++ b/tools/libxl/xl.c
+@@ -38,7 +38,7 @@
+ xentoollog_logger_stdiostream *logger;
+ int dryrun_only;
+ int force_execution;
+-int autoballoon = 1;
++int autoballoon = -1;
+ char *blkdev_start;
+ int run_hotplug_scripts = 1;
+ char *lockfile;
+@@ -98,10 +98,12 @@ static void parse_global_config(const char *configfile,
+         else if (!strcmp(buf, "off") || !strcmp(buf, "0"))
+             autoballoon = 0;
+         else if (!strcmp(buf, "auto"))
+-            autoballoon = auto_autoballoon();
++            autoballoon = -1;
+         else
+             fprintf(stderr, "invalid autoballoon option");
+     }
++    if (autoballoon == -1)
++        autoballoon = auto_autoballoon();
+ 
+     if (!xlu_cfg_get_long (config, "run_hotplug_scripts", &l, 0))
+         run_hotplug_scripts = l;
+-- 
+1.7.9.5
+
+
+From 3abcfd2cb6e0d423993f3abc3e0ea2e780190879 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:40 +0100
+Subject: [PATCH] x86: enforce preemption in HVM_set_mem_access /
+ p2m_set_mem_access()
+
+Processing up to 4G PFNs may take almost arbitrarily long, so
+preemption is needed here.
+
+This is XSA-89.
+
+Signed-off-by: Jan Beulich <jbeulich@suse.com>
+Reviewed-by: Tim Deegan <tim@xen.org>
+---
+ xen/arch/x86/hvm/hvm.c    |    9 +++++++++
+ xen/arch/x86/mm/p2m.c     |   21 +++++++++++++++------
+ xen/include/asm-x86/p2m.h |    4 ++--
+ 3 files changed, 26 insertions(+), 8 deletions(-)
+
+diff --git a/xen/arch/x86/hvm/hvm.c b/xen/arch/x86/hvm/hvm.c
+index 1bcc40d..d2f8015 100644
+--- a/xen/arch/x86/hvm/hvm.c
++++ b/xen/arch/x86/hvm/hvm.c
+@@ -4300,6 +4300,15 @@ long do_hvm_op(unsigned long op, XEN_GUEST_HANDLE(void) arg)
+             goto param_fail5;
+             
+         rc = p2m_set_mem_access(d, a.first_pfn, a.nr, a.hvmmem_access);
++        if ( rc > 0 )
++        {
++            a.first_pfn += a.nr - rc;
++            a.nr = rc;
++            if ( __copy_to_guest(arg, &a, 1) )
++                rc = -EFAULT;
++            else
++                rc = -EAGAIN;
++        }
+ 
+     param_fail5:
+         rcu_unlock_domain(d);
+diff --git a/xen/arch/x86/mm/p2m.c b/xen/arch/x86/mm/p2m.c
+index e111d64..afc6319 100644
+--- a/xen/arch/x86/mm/p2m.c
++++ b/xen/arch/x86/mm/p2m.c
+@@ -1338,15 +1338,14 @@ void p2m_mem_access_resume(struct domain *d)
+ 
+ /* Set access type for a region of pfns.
+  * If start_pfn == -1ul, sets the default access type */
+-int p2m_set_mem_access(struct domain *d, unsigned long start_pfn, 
+-                       uint32_t nr, hvmmem_access_t access) 
++long p2m_set_mem_access(struct domain *d, unsigned long pfn, uint32_t nr,
++                        hvmmem_access_t access)
+ {
+     struct p2m_domain *p2m = p2m_get_hostp2m(d);
+-    unsigned long pfn;
+     p2m_access_t a, _a;
+     p2m_type_t t;
+     mfn_t mfn;
+-    int rc = 0;
++    long rc;
+ 
+     /* N.B. _not_ static: initializer depends on p2m->default_access */
+     p2m_access_t memaccess[] = {
+@@ -1369,14 +1368,17 @@ int p2m_set_mem_access(struct domain *d, unsigned long start_pfn,
+     a = memaccess[access];
+ 
+     /* If request to set default access */
+-    if ( start_pfn == ~0ull ) 
++    if ( pfn == ~0ul )
+     {
+         p2m->default_access = a;
+         return 0;
+     }
+ 
++    if ( !nr )
++        return 0;
++
+     p2m_lock(p2m);
+-    for ( pfn = start_pfn; pfn < start_pfn + nr; pfn++ )
++    for ( ; ; ++pfn )
+     {
+         mfn = p2m->get_entry(p2m, pfn, &t, &_a, 0, NULL);
+         if ( p2m->set_entry(p2m, pfn, mfn, PAGE_ORDER_4K, t, a) == 0 )
+@@ -1384,6 +1386,13 @@ int p2m_set_mem_access(struct domain *d, unsigned long start_pfn,
+             rc = -ENOMEM;
+             break;
+         }
++
++        /* Check for continuation if it's not the last interation. */
++        if ( !--nr || hypercall_preempt_check() )
++        {
++            rc = nr;
++            break;
++        }
+     }
+     p2m_unlock(p2m);
+     return rc;
+diff --git a/xen/include/asm-x86/p2m.h b/xen/include/asm-x86/p2m.h
+index af1359b..43dd1f0 100644
+--- a/xen/include/asm-x86/p2m.h
++++ b/xen/include/asm-x86/p2m.h
+@@ -597,8 +597,8 @@ void p2m_mem_access_resume(struct domain *d);
+ 
+ /* Set access type for a region of pfns.
+  * If start_pfn == -1ul, sets the default access type */
+-int p2m_set_mem_access(struct domain *d, unsigned long start_pfn, 
+-                       uint32_t nr, hvmmem_access_t access);
++long p2m_set_mem_access(struct domain *d, unsigned long start_pfn,
++                        uint32_t nr, hvmmem_access_t access);
+ 
+ /* Get access type for a pfn
+  * If pfn == -1ul, gets the default access type */
+-- 
+1.7.9.5
+
+
+From 921a6d15374eeb1dbbf38ad1d03c93ae24ebed7c Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Tue, 13 May 2014 16:56:41 +0100
+Subject: [PATCH] xen-centos-disable-CFLAGS-for-qemu.patch
+
+---
+ tools/Makefile |    1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/tools/Makefile b/tools/Makefile
+index 5545a87..6d493be 100644
+--- a/tools/Makefile
++++ b/tools/Makefile
+@@ -187,6 +187,7 @@ subdir-all-qemu-xen-dir: qemu-xen-dir-find
+ 		source=.; \
+ 	fi; \
+ 	cd qemu-xen-dir; \
++	env -u CFLAGS \
+ 	$$source/configure --enable-xen --target-list=i386-softmmu \
+ 		--source-path=$$source \
+ 		--extra-cflags="-I$(XEN_ROOT)/tools/include \
+-- 
+1.7.9.5
+
+
+From e7f0d852b5d46b42a72f8bcf751cbebbb6045f84 Mon Sep 17 00:00:00 2001
+From: George Dunlap <george.dunlap@eu.citrix.com>
+Date: Wed, 14 May 2014 15:12:56 +0100
+Subject: [PATCH]
+
+---
+ tools/Rules.mk              |    6 +++---
+ tools/libxl/libxl_blktap2.c |   41 +++++++++++++++++++++++++++--------------
+ 2 files changed, 30 insertions(+), 17 deletions(-)
+
+diff --git a/tools/Rules.mk b/tools/Rules.mk
+index e83f682..4c75cfd 100644
+--- a/tools/Rules.mk
++++ b/tools/Rules.mk
+@@ -46,9 +46,9 @@ LIBXL_BLKTAP ?= n
+ endif
+ 
+ ifeq ($(LIBXL_BLKTAP),y)
+-CFLAGS_libblktapctl = -I$(XEN_BLKTAP2)/control -I$(XEN_BLKTAP2)/include $(CFLAGS_xeninclude)
+-LDLIBS_libblktapctl = -L$(XEN_BLKTAP2)/control -lblktapctl
+-SHLIB_libblktapctl  = -Wl,-rpath-link=$(XEN_BLKTAP2)/control
++CFLAGS_libblktapctl = -I$(XEN_BLKTAP2)/include $(CFLAGS_xeninclude)
++LDLIBS_libblktapctl = -L$(XEN_BLKTAP2)/control/.libs -lblktapctl
++SHLIB_libblktapctl  = -Wl,-rpath-link=$(XEN_BLKTAP2)/control/.libs
+ else
+ CFLAGS_libblktapctl =
+ LDLIBS_libblktapctl =
+diff --git a/tools/libxl/libxl_blktap2.c b/tools/libxl/libxl_blktap2.c
+index 2053403..c85b182 100644
+--- a/tools/libxl/libxl_blktap2.c
++++ b/tools/libxl/libxl_blktap2.c
+@@ -29,20 +29,15 @@ char *libxl__blktap_devpath(libxl__gc *gc,
+ {
+     const char *type;
+     char *params, *devname = NULL;
+-    tap_list_t tap;
+     int err;
+ 
+     type = libxl__device_disk_string_of_format(format);
+-    err = tap_ctl_find(type, disk, &tap);
+-    if (err == 0) {
+-        devname = libxl__sprintf(gc, "/dev/xen/blktap-2/tapdev%d", tap.minor);
+-        if (devname)
+-            return devname;
+-    }
+ 
+     params = libxl__sprintf(gc, "%s:%s", type, disk);
+-    err = tap_ctl_create(params, &devname);
++    fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,params);
++    err = tap_ctl_create(params, &devname, 0, -1, 0);
+     if (!err) {
++        fprintf(stderr, "DEBUG %s %d %s\n",__func__,__LINE__,devname);
+         libxl__ptr_add(gc, devname);
+         return devname;
+     }
+@@ -55,7 +50,10 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
+ {
+     char *type, *disk;
+     int err;
+-    tap_list_t tap;
++	struct list_head list = LIST_HEAD_INIT(list);
++	tap_list_t *entry;
++    int minor = -1;
++    pid_t pid = -1;
+ 
+     type = libxl__strdup(gc, params);
+ 
+@@ -65,19 +63,34 @@ int libxl__device_destroy_tapdisk(libxl__gc *gc, const char *params)
+         return ERROR_INVAL;
+     }
+ 
++    fprintf(stderr, "DEBUG %s %d type=%s disk=%s\n",__func__,__LINE__,type,disk);
+     *disk++ = '\0';
+ 
+-    err = tap_ctl_find(type, disk, &tap);
+-    if (err < 0) {
+-        /* returns -errno */
++    err = tap_ctl_list(&list);
++    if (err)
++        return err;
++    tap_list_for_each_entry(entry, &list) {
++		if (type && (!entry->type || strcmp(entry->type, type)))
++			continue;
++
++		if (disk && (!entry->path || strcmp(entry->path, disk)))
++			continue;
++
++        minor = entry->minor;
++        pid = entry->pid;
++		break;
++	}
++	tap_ctl_list_free(&list);
++
++    if (minor < 0) {
+         LOGEV(ERROR, -err, "Unable to find type %s disk %s", type, disk);
+         return ERROR_FAIL;
+     }
+ 
+-    err = tap_ctl_destroy(tap.id, tap.minor);
++    err = tap_ctl_destroy(pid, minor, 1, NULL);
+     if (err < 0) {
+         LOGEV(ERROR, -err, "Failed to destroy tap device id %d minor %d",
+-              tap.id, tap.minor);
++              pid, minor);
+         return ERROR_FAIL;
+     }
+ 
+-- 
+1.7.9.5
+
