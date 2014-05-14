@@ -270,12 +270,6 @@ popd
 %patch1003 -p1
 %patch1005 -p1
 
-
-pushd `pwd`
-cd ${RPM_BUILD_DIR}/%{name}-%{version}/tools/qemu-xen
-#%patch105 -p1
-popd
-
 # stubdom sources
 cp -v %{SOURCE10} %{SOURCE11} %{SOURCE12} %{SOURCE13} %{SOURCE14} stubdom
 
